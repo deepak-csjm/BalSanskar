@@ -170,7 +170,9 @@ export async function verifyAchievement(
   });
 
   if (existing.createdById === actor.id) {
-    throw forbidden('An achievement must be verified by someone other than the person who recorded it');
+    throw forbidden(
+      'An achievement must be verified by someone other than the person who recorded it',
+    );
   }
   if (existing.status !== 'PENDING') {
     throw invalidState('This achievement has already been reviewed');

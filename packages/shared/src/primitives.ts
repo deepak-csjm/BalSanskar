@@ -123,4 +123,7 @@ export const passwordSchema = z
   .refine((value) => /[A-Z]/.test(value), 'Include an upper-case letter')
   .refine((value) => /\d/.test(value), 'Include a digit');
 
-export const otpCodeSchema = z.string().trim().regex(/^\d{6}$/, 'The code is 6 digits');
+export const otpCodeSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, 'The code is 6 digits');

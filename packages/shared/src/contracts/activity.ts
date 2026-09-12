@@ -69,6 +69,8 @@ export const activityMediaSchema = z.object({
   width: z.number().int().nullable(),
   height: z.number().int().nullable(),
   order: z.number().int(),
+  /** A moderator has confirmed every child in this frame is covered by a consent slip. */
+  consentVerified: z.boolean(),
 });
 export type ActivityMedia = z.infer<typeof activityMediaSchema>;
 

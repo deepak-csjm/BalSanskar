@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { OTP_PURPOSES, USER_ROLES, USER_STATUSES } from '../enums.js';
-import { cleanText, otpCodeSchema, passwordSchema, phoneSchema, udiseSchema } from '../primitives.js';
+import {
+  cleanText,
+  otpCodeSchema,
+  passwordSchema,
+  phoneSchema,
+  udiseSchema,
+} from '../primitives.js';
 
 /**
  * Step one of the teacher login: ask for a one-time code.

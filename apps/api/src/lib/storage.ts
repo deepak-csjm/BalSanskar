@@ -3,7 +3,12 @@ import { createReadStream } from 'node:fs';
 import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, normalize, resolve, sep } from 'node:path';
 import type { Readable } from 'node:stream';
-import { GetObjectCommand, PutObjectCommand, S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { getConfig } from '../config.js';
 import { AppError, ERROR_CODES, forbidden, notFound } from './errors.js';
@@ -40,7 +45,9 @@ export interface StorageDriver {
   put(key: string, body: Buffer, contentType: string): Promise<void>;
   delete(key: string): Promise<void>;
   /** Only implemented by the local driver; S3 serves bytes directly. */
-  createReadStream?(key: string): Promise<{ stream: Readable; contentType: string; sizeBytes: number }>;
+  createReadStream?(
+    key: string,
+  ): Promise<{ stream: Readable; contentType: string; sizeBytes: number }>;
 }
 
 /**
@@ -153,7 +160,13 @@ class LocalStorageDriver implements StorageDriver {
   }): Promise<UploadTicket> {
     const exp = Math.floor(Date.now() / 1000) + this.defaultTtl;
     const token = sign(
-      { key: input.key, op: 'write', exp, contentType: input.contentType, maxBytes: input.sizeBytes },
+      {
+        key: input.key,
+        op: 'write',
+        exp,
+        contentType: input.contentType,
+        maxBytes: input.sizeBytes,
+      },
       this.secret,
     );
     return {
@@ -276,7 +289,11 @@ export function getStorage(): StorageDriver {
             }
           : undefined,
     });
-    driver = new S3StorageDriver(client, config.S3_BUCKET ?? 'balsanskar', config.SIGNED_URL_TTL_SECONDS);
+    driver = new S3StorageDriver(
+      client,
+      config.S3_BUCKET ?? 'balsanskar',
+      config.SIGNED_URL_TTL_SECONDS,
+    );
   } else {
     driver = new LocalStorageDriver(
       config.STORAGE_LOCAL_DIR,

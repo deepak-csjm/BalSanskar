@@ -329,7 +329,11 @@ export async function buildLeaderboard(
   const units =
     query.groupBy === 'BLOCK'
       ? await prisma.block.findMany({
-          where: scope.districtId ? { districtId: scope.districtId } : scope.blockId ? { id: scope.blockId } : {},
+          where: scope.districtId
+            ? { districtId: scope.districtId }
+            : scope.blockId
+              ? { id: scope.blockId }
+              : {},
           select: { id: true, nameHi: true, district: { select: { nameHi: true } } },
         })
       : await prisma.district.findMany({
@@ -374,7 +378,9 @@ export async function buildLeaderboard(
   const achievementMap = new Map(
     achievementCounts.map((row) => [row[groupField] as string, row._count._all]),
   );
-  const lastMap = new Map(lastActivity.map((row) => [row[groupField] as string, row._max.publishedAt]));
+  const lastMap = new Map(
+    lastActivity.map((row) => [row[groupField] as string, row._max.publishedAt]),
+  );
   const activeMap = new Map<string, number>();
   for (const row of activeSchools) {
     const key = row[groupField] as string;
@@ -405,7 +411,9 @@ function orderRows<T extends { publishedActivities: number; verifiedAchievements
   order: 'MOST_ACTIVE' | 'LEAST_ACTIVE',
 ): T[] {
   const score = (row: T) => row.publishedActivities * 2 + row.verifiedAchievements;
-  return [...rows].sort((a, b) => (order === 'MOST_ACTIVE' ? score(b) - score(a) : score(a) - score(b)));
+  return [...rows].sort((a, b) =>
+    order === 'MOST_ACTIVE' ? score(b) - score(a) : score(a) - score(b),
+  );
 }
 
 async function countRecognisedStudentsBySchool(
@@ -484,6 +492,13 @@ export async function findDormantSchools(
  * prefixed — a CSV injection in a file that lands on a government officer's
  * machine is a real attack, not a theoretical one.
  */
+// Excel on Windows reads a CSV as the system codepage unless it finds a byte
+// order mark, which turns every Hindi column name into mojibake.
+const EXCEL_BOM = String.fromCharCode(0xfeff);
+
+// RFC 4180 line ending: Excel and the department's older tooling both expect it.
+const CRLF = '\r\n';
+
 export function toCsv(headers: string[], rows: Array<Array<string | number | null>>): string {
   const escape = (value: string | number | null): string => {
     if (value === null) return '""';
@@ -493,5 +508,5 @@ export function toCsv(headers: string[], rows: Array<Array<string | number | nul
   };
   const lines = [headers.map(escape).join(','), ...rows.map((row) => row.map(escape).join(','))];
   // A BOM so that Excel on a Windows machine reads the Hindi column names correctly.
-  return `﻿${lines.join('\r\n')}\r\n`;
+  return EXCEL_BOM + lines.join(CRLF) + CRLF;
 }

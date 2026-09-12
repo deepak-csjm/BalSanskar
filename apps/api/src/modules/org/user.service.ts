@@ -181,7 +181,12 @@ export async function rejectUser(
   const updated = await prisma.$transaction(async (tx) => {
     const user = await tx.user.update({
       where: { id: userId },
-      data: { status: 'REJECTED', statusReason: reason, approvedById: actor.id, approvedAt: new Date() },
+      data: {
+        status: 'REJECTED',
+        statusReason: reason,
+        approvedById: actor.id,
+        approvedAt: new Date(),
+      },
       include: userInclude,
     });
     await recordAudit(tx, audit, {
@@ -253,7 +258,11 @@ export async function changeUserRole(
   assertScopeComplete(role, target);
 
   const updated = await prisma.$transaction(async (tx) => {
-    const user = await tx.user.update({ where: { id: userId }, data: { role }, include: userInclude });
+    const user = await tx.user.update({
+      where: { id: userId },
+      data: { role },
+      include: userInclude,
+    });
     // The old access token still carries the old role for up to its lifetime,
     // so end the sessions and make the change take effect immediately.
     await revokeAllSessions(tx, userId);

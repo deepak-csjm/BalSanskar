@@ -1,7 +1,7 @@
 import { execSync } from 'node:child_process';
 import { rm } from 'node:fs/promises';
 import type { FastifyInstance } from 'fastify';
-import { PrismaClient, type UserRole } from '@prisma/client';
+import type { PrismaClient, UserRole } from '@prisma/client';
 import { buildApp } from '../src/app.js';
 import { loadConfig, resetConfigCache } from '../src/config.js';
 import { hashPassword } from '../src/lib/crypto.js';
@@ -184,7 +184,11 @@ export function auth(user: TestUser): Record<string, string> {
 
 export async function createStudent(
   schoolId: string,
-  overrides: Partial<{ fullName: string; rollNumber: string; consent: 'GRANTED' | 'DENIED' | null }> = {},
+  overrides: Partial<{
+    fullName: string;
+    rollNumber: string;
+    consent: 'GRANTED' | 'DENIED' | null;
+  }> = {},
 ): Promise<string> {
   const db = getPrisma();
   const student = await db.student.create({

@@ -108,7 +108,11 @@ describe('activity workflow', () => {
         payload: { decision: 'PUBLISH', visibility: 'BLOCK' },
       });
       expect(published.statusCode).toBe(200);
-      const body = published.json() as { status: string; visibility: string; reviewedByName: string };
+      const body = published.json() as {
+        status: string;
+        visibility: string;
+        reviewedByName: string;
+      };
       expect(body.status).toBe('PUBLISHED');
       expect(body.visibility).toBe('BLOCK');
       // The reviewer is recorded by name: a publication has to be attributable.
@@ -162,7 +166,9 @@ describe('activity workflow', () => {
         payload: { decision: 'REJECT', reason: 'Please add what the children learned.' },
       });
       expect(withReason.statusCode).toBe(200);
-      expect((withReason.json() as { rejectionReason: string }).rejectionReason).toContain('learned');
+      expect((withReason.json() as { rejectionReason: string }).rejectionReason).toContain(
+        'learned',
+      );
     });
 
     it('lets a rejected activity be corrected and resubmitted', async () => {
@@ -362,7 +368,9 @@ describe('activity workflow', () => {
         payload: { reason: 'The family asked us to take the photograph down.' },
       });
       expect(revoked.statusCode).toBe(200);
-      expect((revoked.json() as { unpublishedActivityCount: number }).unpublishedActivityCount).toBe(1);
+      expect(
+        (revoked.json() as { unpublishedActivityCount: number }).unpublishedActivityCount,
+      ).toBe(1);
 
       const afterRevoke = await app.inject({ method: 'GET', url: `/v1/public/activities/${id}` });
       expect(afterRevoke.statusCode).toBe(404);
@@ -491,8 +499,9 @@ describe('activity workflow', () => {
         },
       });
       expect(response.statusCode).toBe(400);
-      expect((response.json() as { error: { fields: Record<string, string[]> } }).error.fields)
-        .toHaveProperty('occurredOn');
+      expect(
+        (response.json() as { error: { fields: Record<string, string[]> } }).error.fields,
+      ).toHaveProperty('occurredOn');
     });
 
     it('strips control characters and bidirectional overrides from free text', async () => {

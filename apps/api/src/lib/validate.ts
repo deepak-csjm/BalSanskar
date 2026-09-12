@@ -18,9 +18,14 @@ export function parseOrThrow<T extends ZodTypeAny>(schema: T, value: unknown): z
         const path = issue.path.join('.') || '_';
         (fields[path] ??= []).push(issue.message);
       }
-      throw new AppError(400, ERROR_CODES.VALIDATION_FAILED, 'Please check the highlighted fields', {
-        fields,
-      });
+      throw new AppError(
+        400,
+        ERROR_CODES.VALIDATION_FAILED,
+        'Please check the highlighted fields',
+        {
+          fields,
+        },
+      );
     }
     throw error;
   }

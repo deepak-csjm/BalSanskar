@@ -96,6 +96,7 @@ async function toDetail(row: ActivityRow, actor: Actor): Promise<ActivityDetail>
       width: item.asset.width,
       height: item.asset.height,
       order: item.order,
+      consentVerified: item.consentVerified,
     })),
   );
 
@@ -164,13 +165,16 @@ function scopeToWhere(scope: ScopeFilter): Prisma.ActivityWhereInput {
 function visibilityWhere(actor: Actor): Prisma.ActivityWhereInput {
   if (actor.role === 'TEACHER') {
     return {
-      OR: [
-        { authorId: actor.id },
-        { status: { in: ['PUBLISHED', 'ARCHIVED'] } },
-      ],
+      OR: [{ authorId: actor.id }, { status: { in: ['PUBLISHED', 'ARCHIVED'] } }],
     };
   }
-  return { OR: [{ status: { not: 'DRAFT' } }, { authorId: actor.id }, { schoolId: actor.schoolId ?? undefined }] };
+  return {
+    OR: [
+      { status: { not: 'DRAFT' } },
+      { authorId: actor.id },
+      { schoolId: actor.schoolId ?? undefined },
+    ],
+  };
 }
 
 export async function listActivities(
@@ -193,7 +197,9 @@ export async function listActivities(
       ...(query.status ? [{ status: query.status }] : []),
       ...(query.category ? [{ category: query.category }] : []),
       ...(query.authorId ? [{ authorId: query.authorId }] : []),
-      ...(query.search ? [{ title: { startsWith: query.search, mode: 'insensitive' as const } }] : []),
+      ...(query.search
+        ? [{ title: { startsWith: query.search, mode: 'insensitive' as const } }]
+        : []),
       ...(query.from || query.to
         ? [
             {
@@ -324,7 +330,7 @@ export async function updateActivity(
     throw forbidden('This activity can no longer be edited');
   }
   if (!isAuthor && actor.role === 'TEACHER') {
-    throw forbidden("You can only edit activities you recorded");
+    throw forbidden('You can only edit activities you recorded');
   }
 
   const studentIds =
@@ -462,7 +468,9 @@ export async function moderateActivity(
     throw invalidState('Only an activity awaiting review can be moderated');
   }
   if (existing.authorId === actor.id) {
-    throw forbidden('An activity must be reviewed by someone other than the teacher who recorded it');
+    throw forbidden(
+      'An activity must be reviewed by someone other than the teacher who recorded it',
+    );
   }
 
   if (input.decision === 'REJECT') {
@@ -496,8 +504,7 @@ export async function moderateActivity(
     return toDetail(rejected, actor);
   }
 
-  const visibility: VisibilityLevel =
-    input.visibility ?? existing.requestedVisibility ?? 'BLOCK';
+  const visibility: VisibilityLevel = input.visibility ?? existing.requestedVisibility ?? 'BLOCK';
 
   const blockers = evaluatePublishBlockers(
     toPublishCandidate(existing),
@@ -693,7 +700,7 @@ async function validateStudentIds(
     select: { id: true },
   });
   if (found.length !== unique.length) {
-    throw badRequest('One or more selected students are not on this school\'s active roster', {
+    throw badRequest("One or more selected students are not on this school's active roster", {
       studentIds: ['Unknown or inactive student'],
     });
   }

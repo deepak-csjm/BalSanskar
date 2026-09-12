@@ -71,7 +71,11 @@ export async function createUploadTicket(
       schoolId: actor.schoolId,
       blockId: actor.blockId,
       districtId: actor.districtId,
-      metadata: { purpose: input.purpose, contentType: input.contentType, sizeBytes: input.sizeBytes },
+      metadata: {
+        purpose: input.purpose,
+        contentType: input.contentType,
+        sizeBytes: input.sizeBytes,
+      },
     });
   });
 

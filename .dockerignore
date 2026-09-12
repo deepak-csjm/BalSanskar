@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/build
+**/coverage
+**/.turbo
+**/storage
+**/.test-storage
+**/*.log
+.git
+.github
+docs

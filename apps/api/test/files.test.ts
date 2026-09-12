@@ -93,7 +93,8 @@ describe('files', () => {
       headers: auth(teacher),
       payload: {
         title: 'Classroom photograph attached',
-        description: 'A record with one photograph attached, used to check the signed download path.',
+        description:
+          'A record with one photograph attached, used to check the signed download path.',
         category: 'CLASSROOM_INNOVATION',
         occurredOn: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10),
         mediaKeys: [ticket.key],
@@ -175,7 +176,8 @@ describe('files', () => {
       headers: auth(otherTeacher),
       payload: {
         title: 'Attempting to attach a colleague photograph',
-        description: 'This activity references a storage key uploaded by a teacher at another school.',
+        description:
+          'This activity references a storage key uploaded by a teacher at another school.',
         category: 'OTHER',
         occurredOn: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10),
         mediaKeys: [ticket.key],

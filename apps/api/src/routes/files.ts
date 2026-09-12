@@ -74,15 +74,17 @@ export const fileRoutes: FastifyPluginAsync = async (app) => {
     const payload = verifySignedStorageToken(token, config.JWT_SECRET, 'read');
     const file = await storage.createReadStream(payload.key);
 
-    return reply
-      .header('content-type', file.contentType)
-      .header('content-length', String(file.sizeBytes))
-      // Never let a browser render an uploaded file as a document in this origin.
-      .header('content-disposition', 'inline')
-      .header('x-content-type-options', 'nosniff')
-      .header('content-security-policy', "default-src 'none'; sandbox")
-      .header('cache-control', 'private, max-age=300')
-      .send(file.stream);
+    return (
+      reply
+        .header('content-type', file.contentType)
+        .header('content-length', String(file.sizeBytes))
+        // Never let a browser render an uploaded file as a document in this origin.
+        .header('content-disposition', 'inline')
+        .header('x-content-type-options', 'nosniff')
+        .header('content-security-policy', "default-src 'none'; sandbox")
+        .header('cache-control', 'private, max-age=300')
+        .send(file.stream)
+    );
   });
 };
 
@@ -93,12 +95,12 @@ function looksLikeDeclaredType(body: Buffer, contentType: string | undefined): b
     case 'image/jpeg':
       return body[0] === 0xff && body[1] === 0xd8 && body[2] === 0xff;
     case 'image/png':
-      return (
-        body[0] === 0x89 && body[1] === 0x50 && body[2] === 0x4e && body[3] === 0x47
-      );
+      return body[0] === 0x89 && body[1] === 0x50 && body[2] === 0x4e && body[3] === 0x47;
     case 'image/webp':
-      return body.subarray(0, 4).toString('ascii') === 'RIFF' &&
-        body.subarray(8, 12).toString('ascii') === 'WEBP';
+      return (
+        body.subarray(0, 4).toString('ascii') === 'RIFF' &&
+        body.subarray(8, 12).toString('ascii') === 'WEBP'
+      );
     case 'application/pdf':
       return body.subarray(0, 5).toString('ascii') === '%PDF-';
     default:

@@ -410,7 +410,8 @@ describe('access control', () => {
         headers: auth(teacherA1),
         payload: {
           title: 'A half-written note about the science fair',
-          description: 'This is an unfinished draft that should stay private until it is submitted.',
+          description:
+            'This is an unfinished draft that should stay private until it is submitted.',
           category: 'SCIENCE_AND_MATH',
           occurredOn: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10),
         },

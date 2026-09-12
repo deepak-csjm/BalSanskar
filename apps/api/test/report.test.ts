@@ -263,7 +263,10 @@ describe('reporting and the public showcase', () => {
     });
 
     it('never returns a surname, a guardian, a phone number or a roll number', async () => {
-      const studentId = await createStudent(geo.schoolA1, { fullName: 'अंजलि कुमारी', rollNumber: '17' });
+      const studentId = await createStudent(geo.schoolA1, {
+        fullName: 'अंजलि कुमारी',
+        rollNumber: '17',
+      });
       await app.inject({
         method: 'POST',
         url: `/v1/students/${studentId}/consent`,
@@ -368,7 +371,8 @@ describe('reporting and the public showcase', () => {
         url: '/v1/reports/leaderboard?groupBy=SCHOOL&order=LEAST_ACTIVE',
         headers: auth(stateAdmin),
       });
-      const rows = (response.json() as { rows: Array<{ id: string; publishedActivities: number }> }).rows;
+      const rows = (response.json() as { rows: Array<{ id: string; publishedActivities: number }> })
+        .rows;
       expect(rows[0]?.publishedActivities).toBe(0);
       expect(rows[rows.length - 1]?.id).toBe(geo.schoolA1);
     });

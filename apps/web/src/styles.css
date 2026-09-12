@@ -1,0 +1,679 @@
+/*
+ * BalSanskar visual language.
+ *
+ * Hand-written rather than pulled from a framework, for one reason: this ships
+ * to phones on 2G. The whole stylesheet is a few kilobytes gzipped, where a
+ * utility framework would add a build step and a component library would add
+ * hundreds of kilobytes of JavaScript for widgets we do not need.
+ *
+ * Palette: the deep green of a school board and the ochre of a Basic Shiksha
+ * building, on warm paper rather than clinical white. Chosen to look like the
+ * schools it serves rather than like a generic dashboard.
+ */
+
+:root {
+  --ink: #1a1a17;
+  --ink-soft: #55524b;
+  --ink-faint: #857f74;
+
+  --paper: #fdfcfa;
+  --surface: #ffffff;
+  --surface-sunk: #f4f1ea;
+  --line: #e2ddd2;
+
+  --green: #1c4e40;
+  --green-dark: #143a2f;
+  --green-soft: #e6efeb;
+  --ochre: #b8722a;
+  --ochre-soft: #fbf0e0;
+  --danger: #a32f28;
+  --danger-soft: #fbeae9;
+  --info: #2a5d86;
+  --info-soft: #e8f0f6;
+
+  --radius: 10px;
+  --radius-lg: 16px;
+  --shadow: 0 1px 2px rgb(26 26 23 / 6%), 0 4px 14px rgb(26 26 23 / 5%);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-8: 3rem;
+
+  --font: 'Noto Sans Devanagari', 'Noto Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Comfortably above the 44px minimum: these screens are used one-handed,
+     outdoors, often by someone in a hurry between classes. */
+  --tap: 48px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  /* Devanagari needs more vertical room than Latin to stay legible on a small,
+     scratched screen. */
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.boot {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  color: var(--ink-faint);
+  font-family: var(--font);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 var(--space-3);
+  line-height: 1.3;
+  font-weight: 650;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+h2 {
+  font-size: 1.2rem;
+}
+h3 {
+  font-size: 1.02rem;
+}
+
+p {
+  margin: 0 0 var(--space-3);
+}
+
+a {
+  color: var(--green);
+}
+
+:focus-visible {
+  outline: 3px solid var(--ochre);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   Layout
+   -------------------------------------------------------------------------- */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--green);
+  color: #fff;
+  padding-top: max(var(--space-3), env(safe-area-inset-top));
+}
+
+.topbar__brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #fff;
+  text-decoration: none;
+  margin-inline-end: auto;
+}
+
+.topbar__brand small {
+  font-weight: 400;
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
+.topbar__action {
+  background: rgb(255 255 255 / 12%);
+  border: 1px solid rgb(255 255 255 / 22%);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  min-height: 34px;
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: var(--space-4);
+  padding-bottom: calc(var(--space-8) + env(safe-area-inset-bottom));
+}
+
+.page-head {
+  margin-bottom: var(--space-4);
+}
+
+.page-head p {
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+/* Bottom navigation, because this is a phone app first. */
+.tabbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tabbar__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-2) var(--space-1);
+  min-height: var(--tap);
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-top: 3px solid transparent;
+}
+
+.tabbar__item[aria-current='page'] {
+  color: var(--green);
+  border-top-color: var(--green);
+  font-weight: 650;
+}
+
+.tabbar__icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Surfaces
+   -------------------------------------------------------------------------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow);
+}
+
+.card + .card {
+  margin-top: var(--space-3);
+}
+
+.card__title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+}
+
+.muted {
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.faint {
+  color: var(--ink-faint);
+  font-size: 0.8rem;
+}
+
+/* --------------------------------------------------------------------------
+   Statistics
+   -------------------------------------------------------------------------- */
+
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+}
+
+.stat__value {
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1.1;
+  /* Tabular figures so a column of numbers lines up. */
+  font-variant-numeric: tabular-nums;
+}
+
+.stat__label {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+.bar {
+  height: 8px;
+  background: var(--surface-sunk);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bar__fill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 999px;
+}
+
+/* --------------------------------------------------------------------------
+   Forms
+   -------------------------------------------------------------------------- */
+
+.field {
+  display: block;
+  margin-bottom: var(--space-4);
+}
+
+.field__label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: var(--space-1);
+}
+
+.field__hint {
+  display: block;
+  color: var(--ink-faint);
+  font-size: 0.8rem;
+  margin-bottom: var(--space-1);
+}
+
+.field__error {
+  display: block;
+  color: var(--danger);
+  font-size: 0.82rem;
+  margin-top: var(--space-1);
+  font-weight: 600;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  color: inherit;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+}
+
+textarea {
+  min-height: 7rem;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+input[aria-invalid='true'],
+select[aria-invalid='true'],
+textarea[aria-invalid='true'] {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled,
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* The one-time code: wide, spaced digits, numeric keypad. */
+.otp-input {
+  font-size: 1.6rem;
+  letter-spacing: 0.5em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+fieldset {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  margin: 0 0 var(--space-4);
+}
+
+legend {
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0 var(--space-2);
+}
+
+.checkline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+}
+
+.checkline input {
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  flex: none;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  padding: 0.55rem 1.1rem;
+  font: inherit;
+  font-weight: 650;
+  border-radius: var(--radius);
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  background: var(--surface-sunk);
+  color: var(--ink);
+}
+
+.btn--primary {
+  background: var(--green);
+  color: #fff;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--green-dark);
+}
+
+.btn--ghost {
+  background: transparent;
+  border-color: var(--line);
+}
+
+.btn--danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.btn--small {
+  min-height: 38px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+/* --------------------------------------------------------------------------
+   Status
+   -------------------------------------------------------------------------- */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 650;
+  background: var(--surface-sunk);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.tag--green {
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+.tag--ochre {
+  background: var(--ochre-soft);
+  color: var(--ochre);
+}
+.tag--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.tag--info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.notice {
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  background: var(--surface-sunk);
+  font-size: 0.9rem;
+}
+
+.notice--error {
+  background: var(--danger-soft);
+  border-color: #eccbc9;
+  color: #7c231d;
+}
+
+.notice--success {
+  background: var(--green-soft);
+  border-color: #c6ddd5;
+  color: var(--green-dark);
+}
+
+.notice--warn {
+  background: var(--ochre-soft);
+  border-color: #eed7b4;
+  color: #7d4c15;
+}
+
+.offline-banner {
+  background: var(--ochre);
+  color: #fff;
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.empty {
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  color: var(--ink-soft);
+}
+
+.empty__icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
+/* --------------------------------------------------------------------------
+   Media
+   -------------------------------------------------------------------------- */
+
+.thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+  gap: var(--space-2);
+}
+
+.thumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-sunk);
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.thumb__remove {
+  position: absolute;
+  top: 4px;
+  inset-inline-end: 4px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: rgb(0 0 0 / 60%);
+  color: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Tables — only used on wide screens; they collapse to cards on a phone.
+   -------------------------------------------------------------------------- */
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  text-align: start;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+th {
+  background: var(--surface-sunk);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+td.num {
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+/* --------------------------------------------------------------------------
+   Utility
+   -------------------------------------------------------------------------- */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  inset-inline-start: -9999px;
+}
+
+.skip-link:focus {
+  inset-inline-start: var(--space-3);
+  top: var(--space-3);
+  z-index: 100;
+  background: #fff;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+}
+
+.spinner {
+  width: 1.1em;
+  height: 1.1em;
+  border: 2.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (min-width: 48rem) {
+  .main {
+    padding: var(--space-6);
+  }
+  h1 {
+    font-size: 1.85rem;
+  }
+}

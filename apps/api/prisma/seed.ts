@@ -103,10 +103,30 @@ async function seedDemoData(): Promise<void> {
   const storedBlocks = await prisma.block.findMany({ where: { districtId: district.id } });
 
   const schools = [
-    { udise: '09460100101', nameHi: 'प्राथमिक विद्यालय रामपुर', nameEn: 'Primary School Rampur', village: 'Rampur' },
-    { udise: '09460100102', nameHi: 'प्राथमिक विद्यालय भिनगा', nameEn: 'Primary School Bhinga', village: 'Bhinga' },
-    { udise: '09460200103', nameHi: 'उच्च प्राथमिक विद्यालय सिरसिया', nameEn: 'Upper Primary School Sirsiya', village: 'Sirsiya' },
-    { udise: '09460300104', nameHi: 'कम्पोजिट विद्यालय गिलौला', nameEn: 'Composite School Gilaula', village: 'Gilaula' },
+    {
+      udise: '09460100101',
+      nameHi: 'प्राथमिक विद्यालय रामपुर',
+      nameEn: 'Primary School Rampur',
+      village: 'Rampur',
+    },
+    {
+      udise: '09460100102',
+      nameHi: 'प्राथमिक विद्यालय भिनगा',
+      nameEn: 'Primary School Bhinga',
+      village: 'Bhinga',
+    },
+    {
+      udise: '09460200103',
+      nameHi: 'उच्च प्राथमिक विद्यालय सिरसिया',
+      nameEn: 'Upper Primary School Sirsiya',
+      village: 'Sirsiya',
+    },
+    {
+      udise: '09460300104',
+      nameHi: 'कम्पोजिट विद्यालय गिलौला',
+      nameEn: 'Composite School Gilaula',
+      village: 'Gilaula',
+    },
   ];
 
   for (const [index, school] of schools.entries()) {
@@ -127,7 +147,9 @@ async function seedDemoData(): Promise<void> {
     });
   }
 
-  console.log(`Demo data: ${blocks.length} blocks and ${schools.length} schools in ${district.nameEn}`);
+  console.log(
+    `Demo data: ${blocks.length} blocks and ${schools.length} schools in ${district.nameEn}`,
+  );
 }
 
 async function main(): Promise<void> {

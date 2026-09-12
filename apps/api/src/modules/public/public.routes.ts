@@ -66,12 +66,10 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     });
 
     const page = paginate(rows, query.limit, (row) => row.id);
-    return reply
-      .header('cache-control', 'public, max-age=60')
-      .send({
-        items: await Promise.all(page.items.map(toPublicActivity)),
-        nextCursor: page.nextCursor,
-      });
+    return reply.header('cache-control', 'public, max-age=60').send({
+      items: await Promise.all(page.items.map(toPublicActivity)),
+      nextCursor: page.nextCursor,
+    });
   });
 
   app.get('/public/activities/:id', publicLimit, async (request, reply) => {
@@ -82,9 +80,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
       select: publicSelect,
     });
     if (!row) throw notFound('Activity not found');
-    return reply
-      .header('cache-control', 'public, max-age=60')
-      .send(await toPublicActivity(row));
+    return reply.header('cache-control', 'public, max-age=60').send(await toPublicActivity(row));
   });
 
   /**
@@ -101,9 +97,12 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
       prisma.activity.count({ where: { status: 'PUBLISHED' } }),
       prisma.achievement.count({ where: { status: 'VERIFIED' } }),
     ]);
-    return reply
-      .header('cache-control', 'public, max-age=300')
-      .send({ districts, participatingSchools: schools, publishedActivities: activities, verifiedAchievements: achievements });
+    return reply.header('cache-control', 'public, max-age=300').send({
+      districts,
+      participatingSchools: schools,
+      publishedActivities: activities,
+      verifiedAchievements: achievements,
+    });
   });
 };
 

@@ -1,0 +1,172 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # Formatting, linting and typechecking are fast and independent of the
+  # database, so they run first and fail a broken branch in under a minute.
+  static:
+    name: Format, lint, typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @balsanskar/api exec prisma generate
+      - run: pnpm --filter @balsanskar/shared build
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    services:
+      # The API suite runs against a real PostgreSQL, constraints and all.
+      # Testing the access-control and consent rules against a mock would prove
+      # nothing about what production actually enforces.
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: balsanskar
+          POSTGRES_PASSWORD: balsanskar
+          POSTGRES_DB: balsanskar_test
+        options: >-
+          --health-cmd "pg_isready -U balsanskar"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+    env:
+      DATABASE_URL: postgresql://balsanskar:balsanskar@127.0.0.1:5432/balsanskar_test?schema=public
+      JWT_SECRET: ci-secret-value-that-is-long-enough-for-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @balsanskar/api exec prisma generate
+      - run: pnpm --filter @balsanskar/shared build
+      - run: pnpm --filter @balsanskar/api exec prisma migrate deploy
+      - run: pnpm test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @balsanskar/api exec prisma generate
+      - run: pnpm build
+      - name: Check the first-load bundle stays small
+        # Every kilobyte here is a second of waiting on a rural 2G connection.
+        # If this fails, look at what was added to the entry chunk before
+        # raising the limit.
+        run: node scripts/check-bundle-size.mjs
+
+  smoke:
+    name: End-to-end smoke test
+    runs-on: ubuntu-latest
+    needs: [test]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: balsanskar
+          POSTGRES_PASSWORD: balsanskar
+          POSTGRES_DB: balsanskar
+        options: >-
+          --health-cmd "pg_isready -U balsanskar"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+    env:
+      DATABASE_URL: postgresql://balsanskar:balsanskar@127.0.0.1:5432/balsanskar?schema=public
+      JWT_SECRET: ci-secret-value-that-is-long-enough-for-tests
+      PORT: '4100'
+      PUBLIC_API_BASE_URL: http://127.0.0.1:4100
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_DIR: ./.ci-storage
+      SMS_PROVIDER: console
+      OTP_RESEND_COOLDOWN_SECONDS: '0'
+      LOG_LEVEL: warn
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @balsanskar/api exec prisma generate
+      - run: pnpm --filter @balsanskar/shared build
+      - run: pnpm --filter @balsanskar/api exec prisma migrate deploy
+      - name: Seed reference and demonstration data
+        working-directory: apps/api
+        env:
+          SEED_SUPER_ADMIN_PHONE: '9999900001'
+          SEED_SUPER_ADMIN_PASSWORD: BootstrapPass123
+          SEED_DEMO: 'true'
+        run: pnpm exec tsx prisma/seed.ts
+      - name: Start the API
+        working-directory: apps/api
+        run: |
+          pnpm exec tsx src/server.ts > "$RUNNER_TEMP/api.log" 2>&1 &
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4100/v1/health >/dev/null && exit 0
+            sleep 1
+          done
+          echo "API did not become healthy"; cat "$RUNNER_TEMP/api.log"; exit 1
+      - name: Walk the teacher-to-showcase journey
+        run: BALSANSKAR_URL=http://127.0.0.1:4100 python3 scripts/smoke-test.py
+      - name: API log
+        if: failure()
+        run: cat "$RUNNER_TEMP/api.log"
+
+  docker:
+    name: Container images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build the web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

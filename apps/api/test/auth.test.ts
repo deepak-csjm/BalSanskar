@@ -239,6 +239,18 @@ describe('authentication', () => {
         (wrongPassword.json() as { error: { message: string } }).error.message,
       );
     });
+
+    it('accepts a plain ten-digit number as well as the stored E.164 form', async () => {
+      const admin = await createUser(app, { role: 'STATE_ADMIN' });
+      const tenDigits = admin.phone.replace('+91', '');
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/password/login',
+        payload: { identifier: tenDigits, password: 'TestPassword123' },
+      });
+      expect(response.statusCode).toBe(200);
+    });
   });
 
   describe('refresh tokens', () => {
@@ -284,7 +296,11 @@ describe('authentication', () => {
       const second = (refreshed.json() as { tokens: { refreshToken: string } }).tokens.refreshToken;
 
       // An attacker replays the stolen, already-rotated token...
-      await app.inject({ method: 'POST', url: '/v1/auth/refresh', payload: { refreshToken: first } });
+      await app.inject({
+        method: 'POST',
+        url: '/v1/auth/refresh',
+        payload: { refreshToken: first },
+      });
 
       // ...and the legitimate device is signed out too, which is the point.
       const legitimate = await app.inject({
@@ -319,7 +335,11 @@ describe('authentication', () => {
         blockId: geo.blockA1,
         districtId: geo.districtA,
       });
-      const before = await app.inject({ method: 'GET', url: '/v1/auth/me', headers: auth(teacher) });
+      const before = await app.inject({
+        method: 'GET',
+        url: '/v1/auth/me',
+        headers: auth(teacher),
+      });
       expect(before.statusCode).toBe(200);
 
       await prisma().user.update({ where: { id: teacher.id }, data: { status: 'SUSPENDED' } });
@@ -338,7 +358,8 @@ describe('authentication', () => {
         url: '/v1/auth/password/login',
         payload: { identifier: admin.phone, password: 'TestPassword123' },
       });
-      const refreshToken = (login.json() as { tokens: { refreshToken: string } }).tokens.refreshToken;
+      const refreshToken = (login.json() as { tokens: { refreshToken: string } }).tokens
+        .refreshToken;
 
       const withoutCurrent = await app.inject({
         method: 'POST',

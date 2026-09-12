@@ -90,12 +90,16 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
     return reply.status(204).send();
   });
 
-  app.post('/activities/:id/appreciate', { preHandler: app.requireAuth }, async (request, reply) => {
-    const actor = request.requirePermission('appreciation:give');
-    const { id } = parseOrThrow(idParams, request.params);
-    const input = parseOrThrow(giveAppreciationSchema, request.body ?? {});
-    return reply.send(await giveAppreciation(prisma, actor, id, input, request.auditContext()));
-  });
+  app.post(
+    '/activities/:id/appreciate',
+    { preHandler: app.requireAuth },
+    async (request, reply) => {
+      const actor = request.requirePermission('appreciation:give');
+      const { id } = parseOrThrow(idParams, request.params);
+      const input = parseOrThrow(giveAppreciationSchema, request.body ?? {});
+      return reply.send(await giveAppreciation(prisma, actor, id, input, request.auditContext()));
+    },
+  );
 
   app.post('/uploads', { preHandler: app.requireAuth }, async (request, reply) => {
     const actor = request.requirePermission('activity:create');

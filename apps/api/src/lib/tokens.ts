@@ -25,7 +25,9 @@ function secretKey(): Uint8Array {
   return new TextEncoder().encode(getConfig().JWT_SECRET);
 }
 
-export async function signAccessToken(claims: AccessClaims): Promise<{ token: string; expiresIn: number }> {
+export async function signAccessToken(
+  claims: AccessClaims,
+): Promise<{ token: string; expiresIn: number }> {
   const config = getConfig();
   const expiresIn = config.ACCESS_TOKEN_TTL_SECONDS;
   const token = await new SignJWT({

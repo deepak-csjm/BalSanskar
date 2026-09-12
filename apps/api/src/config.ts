@@ -17,7 +17,9 @@ const envSchema = z
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().min(1).max(65535).default(4000),
     HOST: z.string().default('0.0.0.0'),
-    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+    LOG_LEVEL: z
+      .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
+      .default('info'),
 
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
 
@@ -80,7 +82,12 @@ const envSchema = z
     if (env.NODE_ENV !== 'production') return;
 
     if (env.STORAGE_DRIVER === 's3') {
-      for (const key of ['S3_BUCKET', 'S3_REGION', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'] as const) {
+      for (const key of [
+        'S3_BUCKET',
+        'S3_REGION',
+        'S3_ACCESS_KEY_ID',
+        'S3_SECRET_ACCESS_KEY',
+      ] as const) {
         if (!env[key]) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -94,7 +101,8 @@ const envSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['SMS_PROVIDER'],
-        message: 'Refusing to run in production with the console SMS provider: one-time codes would be written to the log',
+        message:
+          'Refusing to run in production with the console SMS provider: one-time codes would be written to the log',
       });
     }
     if (env.SMS_PROVIDER === 'msg91' && (!env.MSG91_AUTH_KEY || !env.MSG91_TEMPLATE_ID)) {

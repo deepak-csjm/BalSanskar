@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient, User } from '@prisma/client';
 import {
   ERROR_CODES,
+  normalisePhone,
   permissionsFor,
   requiredScopeFields,
   type AuthSession,
@@ -9,7 +10,14 @@ import {
   type UserRole,
 } from '@balsanskar/shared';
 import { getConfig } from '../../config.js';
-import { AppError, conflict, forbidden, notFound, tooManyRequests, unauthenticated } from '../../lib/errors.js';
+import {
+  AppError,
+  conflict,
+  forbidden,
+  notFound,
+  tooManyRequests,
+  unauthenticated,
+} from '../../lib/errors.js';
 import {
   generateOtpCode,
   hashPassword,
@@ -124,10 +132,18 @@ export async function consumeOtp(
   });
 
   if (!challenge) {
-    throw new AppError(400, ERROR_CODES.OTP_INVALID, 'That code is not valid. Please request a new one.');
+    throw new AppError(
+      400,
+      ERROR_CODES.OTP_INVALID,
+      'That code is not valid. Please request a new one.',
+    );
   }
   if (challenge.expiresAt.getTime() < Date.now()) {
-    throw new AppError(400, ERROR_CODES.OTP_EXPIRED, 'That code has expired. Please request a new one.');
+    throw new AppError(
+      400,
+      ERROR_CODES.OTP_EXPIRED,
+      'That code has expired. Please request a new one.',
+    );
   }
   if (challenge.attempts >= config.OTP_MAX_ATTEMPTS) {
     throw new AppError(
@@ -182,9 +198,18 @@ export async function loginWithPassword(
   context: RequestContext,
 ): Promise<AuthSession> {
   const identifier = input.identifier.trim();
+  // Officers type their number the way they say it — ten digits — while the
+  // database stores E.164. Normalising here means one field accepts "9876543210",
+  // "+91 98765 43210" and an email address alike, which is what a person expects
+  // of a box labelled "mobile number or email".
+  const asPhone = normalisePhone(identifier);
   const user = await prisma.user.findFirst({
     where: {
-      OR: [{ phone: identifier }, { email: identifier.toLowerCase() }],
+      OR: [
+        ...(asPhone ? [{ phone: asPhone }] : []),
+        { phone: identifier },
+        { email: identifier.toLowerCase() },
+      ],
     },
   });
 
@@ -192,12 +217,20 @@ export async function loginWithPassword(
   // to that of a known one, so the endpoint does not confirm who has an account.
   if (!user?.passwordHash) {
     await verifyPassword(input.password, 'scrypt$32768$8$1$AAAAAAAAAAAAAAAAAAAAAA$AAAA');
-    throw new AppError(401, ERROR_CODES.INVALID_CREDENTIALS, 'Those details do not match an account');
+    throw new AppError(
+      401,
+      ERROR_CODES.INVALID_CREDENTIALS,
+      'Those details do not match an account',
+    );
   }
 
   const ok = await verifyPassword(input.password, user.passwordHash);
   if (!ok) {
-    throw new AppError(401, ERROR_CODES.INVALID_CREDENTIALS, 'Those details do not match an account');
+    throw new AppError(
+      401,
+      ERROR_CODES.INVALID_CREDENTIALS,
+      'Those details do not match an account',
+    );
   }
 
   assertLoginAllowed(user);
@@ -454,7 +487,11 @@ export async function setPassword(
     }
     const ok = await verifyPassword(input.currentPassword, user.passwordHash);
     if (!ok) {
-      throw new AppError(401, ERROR_CODES.INVALID_CREDENTIALS, 'Your current password is not correct');
+      throw new AppError(
+        401,
+        ERROR_CODES.INVALID_CREDENTIALS,
+        'Your current password is not correct',
+      );
     }
   }
 
@@ -512,8 +549,13 @@ export function assertScopeComplete(
 ): void {
   const missing = requiredScopeFields(role).filter((field) => !scope[field]);
   if (missing.length > 0) {
-    throw new AppError(400, ERROR_CODES.VALIDATION_FAILED, `A ${role} account needs ${missing.join(', ')}`, {
-      fields: Object.fromEntries(missing.map((field) => [field, ['Required for this role']])),
-    });
+    throw new AppError(
+      400,
+      ERROR_CODES.VALIDATION_FAILED,
+      `A ${role} account needs ${missing.join(', ')}`,
+      {
+        fields: Object.fromEntries(missing.map((field) => [field, ['Required for this role']])),
+      },
+    );
   }
 }

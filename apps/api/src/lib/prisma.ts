@@ -52,7 +52,8 @@ export function uniqueViolationTargets(error: unknown): string[] {
   if (!isPrismaError(error, PG_ERROR.UNIQUE_VIOLATION)) return [];
   const meta = (error as { meta?: { target?: unknown } }).meta;
   const target = meta?.target;
-  if (Array.isArray(target)) return target.filter((entry): entry is string => typeof entry === 'string');
+  if (Array.isArray(target))
+    return target.filter((entry): entry is string => typeof entry === 'string');
   if (typeof target === 'string') return [target];
   return [];
 }

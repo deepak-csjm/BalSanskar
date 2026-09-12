@@ -118,8 +118,7 @@ export async function buildApp(config: AppConfig = getConfig()): Promise<Fastify
 
     // Fastify's own errors (rate limit, malformed JSON, payload too large).
     const fastifyError = error as { statusCode?: unknown; message?: unknown };
-    const statusCode =
-      typeof fastifyError.statusCode === 'number' ? fastifyError.statusCode : 500;
+    const statusCode = typeof fastifyError.statusCode === 'number' ? fastifyError.statusCode : 500;
     const message = typeof fastifyError.message === 'string' ? fastifyError.message : 'Bad request';
     if (statusCode === 429) {
       return reply.status(429).send({

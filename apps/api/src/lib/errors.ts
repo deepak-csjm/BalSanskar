@@ -18,7 +18,11 @@ export class AppError extends Error {
     statusCode: number,
     code: ErrorCode,
     message: string,
-    options?: { fields?: Record<string, string[]>; context?: Record<string, unknown>; cause?: unknown },
+    options?: {
+      fields?: Record<string, string[]>;
+      context?: Record<string, unknown>;
+      cause?: unknown;
+    },
   ) {
     super(message, options?.cause === undefined ? undefined : { cause: options.cause });
     this.name = 'AppError';
@@ -35,10 +39,13 @@ export const badRequest = (message: string, fields?: Record<string, string[]>) =
 export const unauthenticated = (message = 'Sign in to continue') =>
   new AppError(401, ERROR_CODES.UNAUTHENTICATED, message);
 
-export const forbidden = (message = 'You do not have access to this', context?: Record<string, unknown>) =>
-  new AppError(403, ERROR_CODES.FORBIDDEN, message, context ? { context } : undefined);
+export const forbidden = (
+  message = 'You do not have access to this',
+  context?: Record<string, unknown>,
+) => new AppError(403, ERROR_CODES.FORBIDDEN, message, context ? { context } : undefined);
 
-export const notFound = (message = 'Not found') => new AppError(404, ERROR_CODES.NOT_FOUND, message);
+export const notFound = (message = 'Not found') =>
+  new AppError(404, ERROR_CODES.NOT_FOUND, message);
 
 export const conflict = (message: string, code: ErrorCode = ERROR_CODES.CONFLICT) =>
   new AppError(409, code, message);

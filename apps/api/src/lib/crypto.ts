@@ -48,9 +48,14 @@ export async function hashPassword(password: string): Promise<string> {
     p: SCRYPT_P,
     maxmem: MAXMEM,
   });
-  return ['scrypt', SCRYPT_N, SCRYPT_R, SCRYPT_P, salt.toString('base64url'), derived.toString('base64url')].join(
-    '$',
-  );
+  return [
+    'scrypt',
+    SCRYPT_N,
+    SCRYPT_R,
+    SCRYPT_P,
+    salt.toString('base64url'),
+    derived.toString('base64url'),
+  ].join('$');
 }
 
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {

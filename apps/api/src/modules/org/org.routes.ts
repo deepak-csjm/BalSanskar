@@ -132,10 +132,7 @@ export const orgRoutes: FastifyPluginAsync = async (app) => {
   app.post('/users/:id/suspend', { preHandler: app.requireAuth }, async (request, reply) => {
     const actor = request.requirePermission('user:suspend');
     const { id } = parseOrThrow(idParams, request.params);
-    const { reason } = parseOrThrow(
-      z.object({ reason: cleanText(3, 300) }),
-      request.body,
-    );
+    const { reason } = parseOrThrow(z.object({ reason: cleanText(3, 300) }), request.body);
     return reply.send(
       await setUserSuspension(prisma, actor, id, true, reason, request.auditContext()),
     );
