@@ -1,0 +1,2934 @@
+<title>BalSanskar Trust Walkthrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@500;600;700&display=swap"
+/>
+
+<style>
+  /* ---------------------------------------------------------------------
+     BalSanskar — consent walkthrough
+
+     Palette taken from the schools themselves: the deep green of a
+     blackboard and the turmeric ochre of a Basic Shiksha building, on the
+     warm paper of a school register. Greys are biased green so they sit in
+     the same family rather than reading as default UI grey.
+     --------------------------------------------------------------------- */
+
+  :root {
+    --board: #1b4b3e;
+    --board-deep: #123329;
+    --board-tint: #e4ede9;
+    --haldi: #c4791f;
+    --haldi-tint: #fbf0dd;
+    --ok: #1b6b4a;
+    --ok-tint: #e2efe8;
+    --stop: #a32f28;
+    --stop-tint: #fae9e8;
+
+    --paper: #fbf9f4;
+    --surface: #ffffff;
+    --sunk: #f2efe6;
+    --rule: #e0dccf;
+    --rule-strong: #cdc7b5;
+
+    --ink: #1a1b18;
+    --ink-soft: #565a52;
+    --ink-faint: #83887c;
+
+    --shadow: 0 1px 2px rgb(26 27 24 / 7%), 0 6px 20px rgb(26 27 24 / 6%);
+    --shadow-lift: 0 10px 40px rgb(18 51 41 / 18%);
+
+    --sans: 'Noto Sans Devanagari', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --serif: 'Noto Serif Devanagari', Georgia, serif;
+
+    --r-sm: 8px;
+    --r: 12px;
+    --r-lg: 18px;
+    --tap: 48px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --board: #2f7a64;
+      --board-deep: #256052;
+      --board-tint: #1d2c27;
+      --haldi: #e0a253;
+      --haldi-tint: #2e2417;
+      --ok: #5cb98f;
+      --ok-tint: #16291f;
+      --stop: #e08a83;
+      --stop-tint: #2d1b19;
+
+      --paper: #14160f;
+      --surface: #1c1f19;
+      --sunk: #23271f;
+      --rule: #333829;
+      --rule-strong: #454b3b;
+
+      --ink: #f0eee5;
+      --ink-soft: #b3b6a9;
+      --ink-faint: #878b7d;
+
+      --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 6px 20px rgb(0 0 0 / 30%);
+      --shadow-lift: 0 10px 40px rgb(0 0 0 / 50%);
+    }
+  }
+
+  :root[data-theme='dark'] {
+    --board: #2f7a64;
+    --board-deep: #256052;
+    --board-tint: #1d2c27;
+    --haldi: #e0a253;
+    --haldi-tint: #2e2417;
+    --ok: #5cb98f;
+    --ok-tint: #16291f;
+    --stop: #e08a83;
+    --stop-tint: #2d1b19;
+
+    --paper: #14160f;
+    --surface: #1c1f19;
+    --sunk: #23271f;
+    --rule: #333829;
+    --rule-strong: #454b3b;
+
+    --ink: #f0eee5;
+    --ink-soft: #b3b6a9;
+    --ink-faint: #878b7d;
+
+    --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 6px 20px rgb(0 0 0 / 30%);
+    --shadow-lift: 0 10px 40px rgb(0 0 0 / 50%);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    /* Devanagari needs more vertical room than Latin to stay legible. */
+    line-height: 1.65;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--serif);
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  a {
+    color: var(--board);
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--haldi);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* --- Page frame ---------------------------------------------------- */
+
+  .demo-banner {
+    background: var(--haldi);
+    color: #22160a;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 0.5rem 1rem;
+    line-height: 1.45;
+  }
+
+  .stage {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: 1fr;
+    align-items: start;
+    max-width: 62rem;
+    margin: 0 auto;
+    padding-inline: 1rem;
+    padding-block: 1.25rem 3rem;
+  }
+
+  @media (min-width: 62rem) {
+    .stage {
+      grid-template-columns: 24rem 1fr;
+      gap: 2.5rem;
+      padding-block: 2.5rem 4rem;
+    }
+  }
+
+  /* The handset. On a phone it disappears and the app fills the screen —
+     a bezel drawn around a real phone would be absurd. */
+  .handset {
+    background: var(--surface);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--rule);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    min-height: 34rem;
+  }
+
+  @media (min-width: 62rem) {
+    .handset {
+      border-radius: 26px;
+      border: 8px solid #22251d;
+      box-shadow: var(--shadow-lift);
+      position: sticky;
+      top: 1.5rem;
+      height: 46rem;
+      min-height: 0;
+    }
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    background: var(--paper);
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 0.9rem;
+    background: var(--board);
+    color: #fff;
+    flex: none;
+  }
+
+  .topbar__brand {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 1rem;
+    margin-inline-end: auto;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+  }
+
+  .topbar__brand small {
+    font-family: var(--sans);
+    font-weight: 400;
+    font-size: 0.68rem;
+    opacity: 0.78;
+  }
+
+  .chip-btn {
+    background: rgb(255 255 255 / 14%);
+    border: 1px solid rgb(255 255 255 / 26%);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 32px;
+  }
+
+  .chip-btn:hover {
+    background: rgb(255 255 255 / 24%);
+  }
+
+  .screen {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .tabbar {
+    display: flex;
+    background: var(--surface);
+    border-top: 1px solid var(--rule);
+    flex: none;
+  }
+
+  .tabbar button {
+    flex: 1;
+    background: none;
+    border: none;
+    border-top: 3px solid transparent;
+    padding: 0.45rem 0.2rem 0.55rem;
+    min-height: var(--tap);
+    font-size: 0.68rem;
+    color: var(--ink-soft);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+  }
+
+  .tabbar button[aria-current='page'] {
+    color: var(--board);
+    border-top-color: var(--board);
+    font-weight: 700;
+  }
+
+  .tabbar svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* --- App surfaces --------------------------------------------------- */
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r);
+    padding: 0.85rem;
+  }
+
+  .card--flat {
+    box-shadow: none;
+  }
+
+  .screen__title {
+    font-size: 1.25rem;
+  }
+
+  .screen__sub {
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+  }
+
+  .rowline {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.6rem;
+  }
+
+  .muted {
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+  }
+
+  .faint {
+    color: var(--ink-faint);
+    font-size: 0.76rem;
+  }
+
+  .eyebrow {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: var(--sunk);
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+
+  .tag--ok {
+    background: var(--ok-tint);
+    color: var(--ok);
+  }
+  .tag--warn {
+    background: var(--haldi-tint);
+    color: var(--haldi);
+  }
+  .tag--stop {
+    background: var(--stop-tint);
+    color: var(--stop);
+  }
+  .tag--board {
+    background: var(--board-tint);
+    color: var(--board);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: var(--tap);
+    padding: 0.5rem 0.9rem;
+    border-radius: var(--r-sm);
+    border: 1.5px solid transparent;
+    background: var(--sunk);
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+  }
+
+  .btn--primary {
+    background: var(--board);
+    color: #fff;
+  }
+  .btn--primary:hover:not(:disabled) {
+    background: var(--board-deep);
+  }
+  .btn--stop {
+    background: var(--stop);
+    color: #fff;
+  }
+  .btn--ghost {
+    background: transparent;
+    border-color: var(--rule-strong);
+  }
+  .btn--block {
+    width: 100%;
+  }
+  .btn--sm {
+    min-height: 36px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.8rem;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .field > label {
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.5rem 0.6rem;
+    font: inherit;
+    font-size: 0.95rem;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1.5px solid var(--rule-strong);
+    border-radius: var(--r-sm);
+  }
+
+  textarea {
+    min-height: 5.5rem;
+    resize: vertical;
+  }
+
+  .notice {
+    border-radius: var(--r-sm);
+    padding: 0.65rem 0.75rem;
+    font-size: 0.85rem;
+    border: 1px solid var(--rule);
+    background: var(--sunk);
+  }
+
+  .notice--stop {
+    background: var(--stop-tint);
+    border-color: var(--stop);
+    color: var(--stop);
+    font-weight: 600;
+  }
+  .notice--ok {
+    background: var(--ok-tint);
+    border-color: var(--ok);
+    color: var(--ok);
+    font-weight: 600;
+  }
+  .notice--warn {
+    background: var(--haldi-tint);
+    border-color: var(--haldi);
+    color: #7a4a11;
+  }
+
+  :root[data-theme='dark'] .notice--warn,
+  :root:not([data-theme='light']) .notice--warn {
+    color: var(--haldi);
+  }
+
+  .checkline {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    min-height: 42px;
+    padding: 0.2rem 0;
+    font-size: 0.9rem;
+  }
+
+  .checkline input {
+    width: 20px;
+    min-height: 20px;
+    height: 20px;
+    margin-top: 0.5rem;
+    flex: none;
+  }
+
+  .photo {
+    border-radius: var(--r-sm);
+    overflow: hidden;
+    background: var(--sunk);
+    aspect-ratio: 4 / 3;
+    display: block;
+    width: 100%;
+  }
+
+  .photo svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* --- The register: consent history and endorsements ------------------ */
+
+  .register {
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--r-sm);
+    background: repeating-linear-gradient(var(--surface) 0 1.85rem, var(--rule) 1.85rem 1.9rem);
+    padding: 0.1rem 0.7rem;
+  }
+
+  .register__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.6rem;
+    height: 1.9rem;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+  }
+
+  .register__row strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .stamp {
+    display: inline-block;
+    border: 2px solid var(--ok);
+    color: var(--ok);
+    border-radius: 4px;
+    padding: 0.1rem 0.45rem;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transform: rotate(-3deg);
+  }
+
+  .stamp--stop {
+    border-color: var(--stop);
+    color: var(--stop);
+  }
+
+  /* --- Guidance rail --------------------------------------------------- */
+
+  .rail {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--r);
+    padding: 1.1rem;
+    box-shadow: var(--shadow);
+  }
+
+  .panel h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .panel > * + * {
+    margin-top: 0.6rem;
+  }
+
+  .roles {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  }
+
+  .role {
+    text-align: start;
+    border: 1.5px solid var(--rule-strong);
+    background: var(--surface);
+    border-radius: var(--r-sm);
+    padding: 0.6rem 0.7rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-height: var(--tap);
+  }
+
+  .role[aria-pressed='true'] {
+    border-color: var(--board);
+    background: var(--board-tint);
+    box-shadow: inset 0 0 0 1px var(--board);
+  }
+
+  .role strong {
+    font-size: 0.9rem;
+  }
+
+  /* The walkthrough is a real sequence, so it is numbered. */
+  .steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: 1.6rem 1fr;
+    gap: 0.6rem;
+    padding: 0.45rem 0;
+    border-top: 1px solid var(--rule);
+    font-size: 0.87rem;
+    color: var(--ink-soft);
+    align-items: start;
+  }
+
+  .step:first-child {
+    border-top: none;
+  }
+
+  .step__n {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: var(--ink-faint);
+    border: 1.5px solid var(--rule-strong);
+    border-radius: 50%;
+    width: 1.6rem;
+    height: 1.6rem;
+    display: grid;
+    place-items: center;
+    line-height: 1;
+  }
+
+  .step--done .step__n {
+    background: var(--ok);
+    border-color: var(--ok);
+    color: #fff;
+  }
+
+  .step--now {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .step--now .step__n {
+    border-color: var(--haldi);
+    color: var(--haldi);
+    box-shadow: 0 0 0 3px var(--haldi-tint);
+  }
+
+  .why {
+    border-inline-start: 3px solid var(--board);
+    background: var(--board-tint);
+    padding: 0.6rem 0.8rem;
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    font-size: 0.87rem;
+  }
+
+  .why strong {
+    display: block;
+    font-family: var(--serif);
+  }
+
+  .disclosure {
+    border-top: 1px solid var(--rule);
+    padding-top: 0.6rem;
+  }
+
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    min-height: 32px;
+  }
+
+  .toast {
+    position: fixed;
+    inset-inline: 1rem;
+    bottom: 1rem;
+    max-width: 28rem;
+    margin-inline: auto;
+    background: var(--board-deep);
+    color: #fff;
+    padding: 0.7rem 0.9rem;
+    border-radius: var(--r-sm);
+    font-size: 0.87rem;
+    box-shadow: var(--shadow-lift);
+    z-index: 50;
+    animation: rise 0.18s ease-out;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .empty {
+    text-align: center;
+    color: var(--ink-soft);
+    padding: 2rem 1rem;
+    font-size: 0.9rem;
+  }
+</style>
+
+
+<style>
+  /* Additions for the two tracks and the block officer's queue. */
+
+  .tracks {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .track {
+    flex: 1 1 10rem;
+    text-align: start;
+    border: 1.5px solid var(--rule-strong);
+    background: var(--surface);
+    border-radius: var(--r-sm);
+    padding: 0.5rem 0.7rem;
+    cursor: pointer;
+    min-height: var(--tap);
+    font-size: 0.86rem;
+    line-height: 1.35;
+  }
+
+  .track[aria-pressed='true'] {
+    border-color: var(--board);
+    background: var(--board-tint);
+    box-shadow: inset 0 0 0 1px var(--board);
+    font-weight: 650;
+  }
+
+  .track small {
+    display: block;
+    font-weight: 400;
+    color: var(--ink-faint);
+    font-size: 0.74rem;
+  }
+
+  /* The risk queue. A severity stripe so what needs attention reads at a
+     glance, rather than a wall of identically-weighted cards. */
+  .risk {
+    border-inline-start: 4px solid var(--rule-strong);
+    padding-inline-start: 0.6rem;
+  }
+  .risk--high {
+    border-inline-start-color: var(--stop);
+  }
+  .risk--medium {
+    border-inline-start-color: var(--haldi);
+  }
+  .risk--low {
+    border-inline-start-color: var(--ok);
+  }
+
+  .risk__score {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+
+  .flaglist {
+    margin: 0.4rem 0 0;
+    padding-inline-start: 1.05rem;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+  }
+
+  .flaglist li + li {
+    margin-top: 0.15rem;
+  }
+
+  /* The attestation. Set apart from the rest of the form, because signing it
+     is a different kind of act from filling a field in. */
+  .attestation {
+    border: 2px solid var(--board);
+    border-radius: var(--r-sm);
+    background: var(--board-tint);
+    padding: 0.75rem;
+  }
+
+  .attestation p {
+    font-size: 0.87rem;
+    line-height: 1.6;
+  }
+
+  .meter {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+  }
+
+  .meter strong {
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+</style>
+
+<p class="demo-banner" id="banner"></p>
+
+<div class="stage">
+  <div class="handset">
+    <div class="app">
+      <header class="topbar">
+        <span class="topbar__brand">बालसंस्कार <small id="topbar-sub"></small></span>
+        <button class="chip-btn" id="lang-toggle" type="button"></button>
+        <button class="chip-btn" id="reset" type="button"></button>
+      </header>
+      <main class="screen" id="screen" tabindex="-1"></main>
+      <nav class="tabbar" id="tabbar" aria-label="BalSanskar"></nav>
+    </div>
+  </div>
+
+  <div class="rail">
+    <section class="panel">
+      <p class="eyebrow" id="rail-eyebrow"></p>
+      <h2 id="rail-title"></h2>
+      <p class="muted" id="rail-intro"></p>
+      <div class="tracks" id="tracks"></div>
+      <div class="roles" id="roles"></div>
+      <p class="faint" id="role-note"></p>
+    </section>
+
+    <section class="panel">
+      <h2 id="steps-title"></h2>
+      <ol class="steps" id="steps"></ol>
+    </section>
+
+    <section class="panel">
+      <h2 id="why-title"></h2>
+      <div id="why-body"></div>
+    </section>
+
+    <section class="panel">
+      <details class="disclosure" id="about">
+        <summary id="about-summary"></summary>
+        <div id="about-body"></div>
+      </details>
+    </section>
+  </div>
+</div>
+
+<script>
+  'use strict';
+
+  /* =====================================================================
+     BalSanskar — how a school joins, and how its work gets out
+
+     A demonstration of two things the platform has to get right:
+
+       1. How 130,000 schools get onto a platform nobody has time to type
+          them into, without letting a stranger claim one.
+       2. What has to be true before a school's work is seen outside that
+          school — given that a head teacher signing off a colleague's work
+          in a three-teacher school is not an independent check on anything.
+
+     Two things this is NOT:
+       - It is not the real system. Every rule below runs in this browser;
+         in the platform they run on the server and in the database, which
+         is the copy that counts.
+       - It holds no real data. The schools, teachers and children here are
+         invented, nothing is uploaded, and nothing leaves this device.
+     ===================================================================== */
+
+  var STORE_KEY = 'balsanskar.demo.v2';
+
+  // -------------------------------------------------------------------
+  // Copy. Hindi first, because that is the language these schools work in.
+  // -------------------------------------------------------------------
+  var COPY = {
+    hi: {
+      banner:
+        'प्रदर्शन संस्करण — यह वास्तविक प्रणाली नहीं है। कृपया किसी असली बच्चे का नाम या फ़ोटो दर्ज न करें।',
+      langBtn: 'EN',
+      reset: 'फिर से',
+      railEyebrow: 'आज़माकर देखिए',
+      railTitle: 'बालसंस्कार कैसे काम करता है',
+      railIntro:
+        'दो बातें देखिए: एक नया विद्यालय मंच से कैसे जुड़ता है, और किसी विद्यालय का काम उसकी चारदीवारी से बाहर जाने से पहले क्या-क्या ज़रूरी है।',
+      roleNote:
+        'असली मंच पर आप मोबाइल पर आए कोड से साइन इन करते हैं और आपकी एक ही भूमिका होती है। यहाँ जाँचने की सुविधा के लिए आप भूमिकाएँ बदल सकते हैं।',
+      whyTitle: 'अभी क्या हुआ',
+      aboutSummary: 'यह प्रदर्शन क्या है, और क्या नहीं',
+      aboutBody:
+        '<p class="muted">बालसंस्कार शिक्षकों के लिए बना एक साझा मंच है — ताकि कक्षा का काम इंस्टाग्राम या फ़ेसबुक पर नहीं, बल्कि विभाग के अपने रिकॉर्ड में दर्ज हो।</p><p class="muted" style="margin-top:.5rem">यह पन्ना केवल प्रदर्शन है। यहाँ के नियम इसी ब्राउज़र में चलते हैं; असली मंच पर ये सर्वर और डेटाबेस में लागू होते हैं। आपकी कोई जानकारी कहीं नहीं भेजी जाती — सिर्फ़ इसी फ़ोन में रहती है।</p><p class="muted" style="margin-top:.5rem">यहाँ दिए गए विद्यालय, शिक्षक और बच्चे काल्पनिक हैं।</p><p class="muted" style="margin-top:.5rem"><strong>यह पक्का नहीं कर सकता</strong> कि कोई गतिविधि सचमुच हुई। दो सहकर्मी मिलकर सजाई हुई गतिविधि की असली फ़ोटो खींच लें तो कोई सॉफ़्टवेयर नहीं पकड़ेगा। जो हो सकता है वह यह है: नक़ल करना असली काम करने से महँगा बना देना, और गड़बड़ी का पैटर्न अधिकारी को दिखा देना।</p>',
+
+      trackJoin: 'विद्यालय कैसे जुड़ता है',
+      trackJoinSub: 'दावा · खंड कार्यालय की पुष्टि',
+      trackOut: 'काम बाहर कैसे जाता है',
+      trackOutSub: 'प्रमाणन · जाँच · सहमति',
+
+      roleClaimant: 'नए प्रधानाध्यापक',
+      roleClaimantWho: 'कमला देवी · अभी जुड़े नहीं',
+      roleTeacher: 'शिक्षक',
+      roleTeacherWho: 'राम प्रसाद वर्मा',
+      roleHead: 'प्रधानाध्यापक',
+      roleHeadWho: 'सुनीता देवी',
+      roleBlock: 'खंड शिक्षा अधिकारी',
+      roleBlockWho: 'जमुनहा खंड',
+      roleDistrict: 'जनपद अधिकारी',
+      roleDistrictWho: 'श्रावस्ती कार्यालय',
+
+      tabHome: 'गतिविधियाँ',
+      tabRoster: 'बच्चे',
+      tabQueue: 'जाँच',
+      tabClaims: 'दावे',
+      tabShowcase: 'प्रदर्शनी',
+
+      school: 'प्रा॰ वि॰ रामपुर',
+      newActivity: 'नई गतिविधि',
+      noActivities: 'अभी कोई गतिविधि नहीं है।',
+      nothingToReview: 'जाँच के लिए कुछ भी लंबित नहीं है।',
+
+      statusDRAFT: 'ड्राफ़्ट',
+      statusPENDING: 'समीक्षा में',
+      statusPUBLISHED: 'प्रकाशित',
+      statusREJECTED: 'वापस भेजा गया',
+
+      visSCHOOL: 'केवल विद्यालय',
+      visBLOCK: 'खंड स्तर',
+      visDISTRICT: 'जनपद स्तर',
+      visPUBLIC: 'सार्वजनिक',
+
+      clearNOT_REQUIRED: 'विद्यालय तक ही',
+      clearAWAITING_BLOCK: 'खंड जाँच लंबित',
+      clearAUTO_CLEARED: 'स्वतः स्वीकृत',
+      clearCLEARED: 'खंड से स्वीकृत',
+      clearRETURNED: 'खंड से वापस',
+
+      consentGRANTED: 'सहमति प्राप्त',
+      consentDENIED: 'सहमति नहीं दी',
+      consentREVOKED: 'सहमति वापस ली',
+      consentNONE: 'सहमति दर्ज नहीं',
+
+      tierNEW: 'नया विद्यालय',
+      tierSTANDARD: 'सामान्य',
+      tierTRUSTED: 'भरोसेमंद रिकॉर्ड',
+      tierWATCH: 'निगरानी में',
+
+      back: 'वापस',
+      submitForReview: 'प्रधानाध्यापक को भेजें',
+      requestedVisibility: 'कहाँ तक दिखे',
+      publish: 'भेजें',
+      publishSchool: 'विद्यालय में प्रकाशित करें',
+      reject: 'वापस करें',
+      rejectReason: 'कारण लिखिए',
+      recognised: 'सम्मानित बच्चे',
+      author: 'दर्ज करने वाले',
+
+      attestTitle: 'प्रधानाध्यापक का प्रमाणन',
+      attestBody:
+        'मैं प्रमाणित करता/करती हूँ कि यह गतिविधि उपरोक्त तिथि को इसी विद्यालय में हुई, मैंने इसे स्वयं देखा है अथवा संबंधित शिक्षक से इसकी पुष्टि की है, और इसमें नामित प्रत्येक बच्चे की हस्ताक्षरित सहमति पर्ची विद्यालय के अभिलेख में उपलब्ध है।',
+      attestConfirm: 'मैं उपरोक्त कथन की पुष्टि करता/करती हूँ',
+      attestNeeded: 'विद्यालय से बाहर भेजने के लिए प्रमाणन आवश्यक है।',
+      attestedBy: 'प्रमाणित किया',
+
+      queueTitle: 'खंड जाँच',
+      queueEmpty: 'जाँच के लिए कुछ भी लंबित नहीं है।',
+      queueWhy: 'यह यहाँ क्यों है',
+      reasonFLAGGED: 'संकेत मिले हैं',
+      reasonSAMPLED: 'नमूना जाँच',
+      riskScore: 'जोखिम अंक',
+      clear: 'स्वीकृत करें',
+      returnToSchool: 'विद्यालय को वापस करें',
+      returnReason: 'क्या सुधारना है',
+
+      claimsTitle: 'विद्यालय के दावे',
+      claimsEmpty: 'कोई दावा लंबित नहीं है।',
+      claimVerify: 'पुष्टि करें',
+      claimReject: 'अस्वीकार करें',
+      claimTitle: 'अपने विद्यालय का दावा करें',
+      claimIntro:
+        'अपने विद्यालय का ग्यारह अंकों का UDISE कोड डालिए। खंड शिक्षा अधिकारी पुष्टि करेंगे, तभी विद्यालय मंच पर आएगा।',
+      udiseLabel: 'UDISE कोड',
+      udiseHint: 'विद्यालय के बोर्ड पर लिखा ग्यारह अंकों का कोड',
+      schoolNameLabel: 'विद्यालय का नाम',
+      yourNameLabel: 'आपका नाम',
+      designationLabel: 'पदनाम',
+      boardPhoto: 'विद्यालय के बोर्ड की फ़ोटो',
+      boardPhotoHint:
+        'वैकल्पिक। बोर्ड पर नाम और कोड दोनों लिखे होते हैं — जो सचमुच वहाँ हैं उनके लिए एक मिनट का काम।',
+      raiseClaim: 'दावा भेजें',
+      claimSent: 'दावा खंड कार्यालय को भेज दिया गया।',
+      claimPending:
+        'आपका दावा खंड शिक्षा अधिकारी के पास है। पुष्टि होने तक विद्यालय में कुछ भी दर्ज नहीं किया जा सकता।',
+      claimVerified: 'विद्यालय की पुष्टि हो गई। अब आप प्रधानाध्यापक के रूप में काम कर सकते हैं।',
+      claimantSays: 'दावा करने वाले',
+      matchesRegister: 'यह कोड रजिस्टर में पहले से है',
+      notInRegister: 'यह कोड रजिस्टर में नहीं है — पुष्टि पर नया विद्यालय बनेगा',
+      pendingSchool: 'पुष्टि लंबित',
+
+      consentTitle: 'फ़ोटो प्रकाशन की सहमति',
+      consentExplain:
+        'बच्चे की फ़ोटो सार्वजनिक रूप से दिखाने से पहले अभिभावक की लिखित सहमति ज़रूरी है।',
+      recordConsent: 'सहमति दर्ज करें',
+      withdrawConsent: 'सहमति वापस लें',
+      withdrawWarn: 'सहमति वापस लेते ही इस बच्चे की सारी सार्वजनिक फ़ोटो तुरंत हटा दी जाएँगी।',
+      withdrawReason: 'कारण',
+      classLabel: 'कक्षा',
+      guardianLabel: 'अभिभावक',
+
+      showcaseTitle: 'हमारे विद्यालयों का कार्य',
+      showcaseSub: 'सत्यापित और सार्वजनिक रूप से स्वीकृत गतिविधियाँ',
+      showcaseEmpty: 'अभी कोई सार्वजनिक गतिविधि नहीं है।',
+      surnameNote:
+        'ध्यान दीजिए: यहाँ बच्चे का केवल पहला नाम और कक्षा दिखती है — पूरा नाम, क्रमांक या अभिभावक का नाम कभी नहीं।',
+
+      trustTitle: 'विद्यालय का रिकॉर्ड',
+      trustCleared: 'स्वीकृत',
+      trustReturned: 'वापस हुए',
+      trustSample: 'कितना काम जाँचा जाता है',
+
+      feedbackLabel: 'आपकी राय',
+      feedbackHint: 'क्या कठिन लगा? क्या समझ नहीं आया? यहाँ लिखिए और फिर कॉपी करके भेज दीजिए।',
+      copyNotes: 'राय कॉपी करें',
+      copied: 'कॉपी हो गया — अब जहाँ भेजना है वहाँ पेस्ट कर दीजिए।',
+      copyFailed: 'कॉपी नहीं हो सका। कृपया लिखा हुआ चुनकर स्वयं कॉपी कर लें।',
+    },
+
+    en: {
+      banner:
+        "Demonstration only — this is not the live system. Please don't enter a real child's name or photograph.",
+      langBtn: 'हिं',
+      reset: 'Restart',
+      railEyebrow: 'Try it',
+      railTitle: 'How BalSanskar works',
+      railIntro:
+        "Two things to look at: how a new school gets onto the platform, and what has to be true before a school's work is seen outside its own walls.",
+      roleNote:
+        'On the real platform you sign in with a code sent to your phone and hold one role. Here you can switch between roles so you can test the whole handover yourself.',
+      whyTitle: 'What just happened',
+      aboutSummary: 'What this demo is, and what it is not',
+      aboutBody:
+        '<p class="muted">BalSanskar is a shared platform for teachers, so that classroom work is recorded in the department’s own system rather than on Instagram or Facebook.</p><p class="muted" style="margin-top:.5rem">This page is a demonstration. Its rules run in this browser; on the real platform they run on the server and in the database, which is the copy that counts. Nothing you type is sent anywhere — it stays on this device.</p><p class="muted" style="margin-top:.5rem">The schools, teachers and children here are invented.</p><p class="muted" style="margin-top:.5rem"><strong>What this cannot do</strong> is prove an activity really happened. Two colleagues who stage one and photograph it are undetectable by any software. What it can do is make faking cost more than doing the work, and make the pattern of faking visible to someone with oversight.</p>',
+
+      trackJoin: 'How a school joins',
+      trackJoinSub: 'Claim, then the block office confirms',
+      trackOut: 'How work gets out',
+      trackOutSub: 'Attest, assess, consent',
+
+      roleClaimant: 'New head teacher',
+      roleClaimantWho: 'Kamla Devi · not yet on the platform',
+      roleTeacher: 'Teacher',
+      roleTeacherWho: 'Ram Prasad Verma',
+      roleHead: 'Head teacher',
+      roleHeadWho: 'Sunita Devi',
+      roleBlock: 'Block education officer',
+      roleBlockWho: 'Jamunaha block',
+      roleDistrict: 'District officer',
+      roleDistrictWho: 'Shravasti office',
+
+      tabHome: 'Activities',
+      tabRoster: 'Children',
+      tabQueue: 'Clearance',
+      tabClaims: 'Claims',
+      tabShowcase: 'Showcase',
+
+      school: 'PS Rampur',
+      newActivity: 'New activity',
+      noActivities: 'Nothing recorded yet.',
+      nothingToReview: 'Nothing is waiting.',
+
+      statusDRAFT: 'Draft',
+      statusPENDING: 'In review',
+      statusPUBLISHED: 'Published',
+      statusREJECTED: 'Sent back',
+
+      visSCHOOL: 'School only',
+      visBLOCK: 'Block',
+      visDISTRICT: 'District',
+      visPUBLIC: 'Public',
+
+      clearNOT_REQUIRED: 'Stays in school',
+      clearAWAITING_BLOCK: 'Awaiting block clearance',
+      clearAUTO_CLEARED: 'Auto-cleared',
+      clearCLEARED: 'Cleared by the block',
+      clearRETURNED: 'Returned by the block',
+
+      consentGRANTED: 'Consent given',
+      consentDENIED: 'Consent refused',
+      consentREVOKED: 'Consent withdrawn',
+      consentNONE: 'Not recorded',
+
+      tierNEW: 'New school',
+      tierSTANDARD: 'Standard',
+      tierTRUSTED: 'Clean record',
+      tierWATCH: 'Under watch',
+
+      back: 'Back',
+      submitForReview: 'Send to the head teacher',
+      requestedVisibility: 'Who should see this',
+      publish: 'Send on',
+      publishSchool: 'Publish within the school',
+      reject: 'Send back',
+      rejectReason: 'Give a reason',
+      recognised: 'Children being recognised',
+      author: 'Recorded by',
+
+      attestTitle: "The head teacher's attestation",
+      attestBody:
+        'I confirm that this activity took place at this school on the date stated, that I have seen it myself or verified it with the teacher concerned, and that a signed consent slip is on file for every child named.',
+      attestConfirm: 'I confirm the statement above',
+      attestNeeded: 'Work cannot leave the school without this.',
+      attestedBy: 'Attested by',
+
+      queueTitle: 'Block clearance',
+      queueEmpty: 'Nothing is waiting for clearance.',
+      queueWhy: 'Why this is here',
+      reasonFLAGGED: 'Flagged',
+      reasonSAMPLED: 'Sampled',
+      riskScore: 'Risk',
+      clear: 'Clear it',
+      returnToSchool: 'Send back to the school',
+      returnReason: 'What needs correcting',
+
+      claimsTitle: 'School claims',
+      claimsEmpty: 'No claims waiting.',
+      claimVerify: 'Verify',
+      claimReject: 'Reject',
+      claimTitle: 'Claim your school',
+      claimIntro:
+        "Enter your school's eleven-digit UDISE code. The block education officer confirms it, and only then does the school appear on the platform.",
+      udiseLabel: 'UDISE code',
+      udiseHint: 'The eleven-digit code written on the school board',
+      schoolNameLabel: 'School name',
+      yourNameLabel: 'Your name',
+      designationLabel: 'Designation',
+      boardPhoto: 'Photograph of the school board',
+      boardPhotoHint:
+        'Optional. The board carries both the name and the code — a minute’s work for someone who is actually there.',
+      raiseClaim: 'Send the claim',
+      claimSent: 'Your claim has gone to the block office.',
+      claimPending:
+        'Your claim is with the block education officer. Nothing can be recorded at the school until it is confirmed.',
+      claimVerified: 'The school is confirmed. You can now work as its head teacher.',
+      claimantSays: 'Claimed by',
+      matchesRegister: 'This code is already in the register',
+      notInRegister: 'This code is not in the register — verifying will create the school',
+      pendingSchool: 'Awaiting confirmation',
+
+      consentTitle: 'Consent to publish photographs',
+      consentExplain:
+        "A guardian's written consent is required before a child's photograph can be shown publicly.",
+      recordConsent: 'Record consent',
+      withdrawConsent: 'Withdraw consent',
+      withdrawWarn:
+        'Withdrawing consent immediately removes every public photograph of this child.',
+      withdrawReason: 'Reason',
+      classLabel: 'Class',
+      guardianLabel: 'Guardian',
+
+      showcaseTitle: 'The work of our schools',
+      showcaseSub: 'Verified activities approved for public view',
+      showcaseEmpty: 'No public activities yet.',
+      surnameNote:
+        'Note: a child appears here by given name and class only — never the full name, roll number or guardian.',
+
+      trustTitle: "The school's record",
+      trustCleared: 'Cleared',
+      trustReturned: 'Sent back',
+      trustSample: 'Share of work reviewed',
+
+      feedbackLabel: 'Your notes',
+      feedbackHint: 'What was confusing or hard? Write it here, then copy it and send it on.',
+      copyNotes: 'Copy my notes',
+      copied: 'Copied — paste it wherever you need to send it.',
+      copyFailed: 'Could not copy. Please select the text and copy it yourself.',
+    },
+  };
+
+  // -------------------------------------------------------------------
+  // Seed data. Entirely invented.
+  // -------------------------------------------------------------------
+  function seed() {
+    return {
+      lang: 'hi',
+      track: 'out',
+      role: 'TEACHER',
+      tab: 'home',
+      open: null,
+      why: 'welcome',
+      notes: '',
+      done: {},
+
+      // The school being claimed in track one.
+      claim: null,
+
+      // The school everything in track two happens at.
+      school: {
+        name: { hi: 'प्रा॰ वि॰ रामपुर', en: 'PS Rampur' },
+        tier: 'NEW',
+        cleared: 0,
+        returned: 0,
+      },
+
+      students: [
+        {
+          id: 's1',
+          name: { hi: 'अंजलि कुमारी', en: 'Anjali Kumari' },
+          given: { hi: 'अंजलि', en: 'Anjali' },
+          cls: '5',
+          guardian: { hi: 'राम कुमार', en: 'Ram Kumar' },
+          consent: null,
+        },
+        {
+          id: 's2',
+          name: { hi: 'रवि प्रसाद', en: 'Ravi Prasad' },
+          given: { hi: 'रवि', en: 'Ravi' },
+          cls: '5',
+          guardian: { hi: 'श्यामलाल', en: 'Shyamlal' },
+          consent: 'GRANTED',
+        },
+        {
+          id: 's3',
+          name: { hi: 'सीमा देवी', en: 'Seema Devi' },
+          given: { hi: 'सीमा', en: 'Seema' },
+          cls: '4',
+          guardian: { hi: 'गीता देवी', en: 'Geeta Devi' },
+          consent: 'GRANTED',
+        },
+      ],
+
+      activities: [
+        {
+          id: 'a1',
+          title: {
+            hi: 'कक्षा 5 में पठन कोना बनाया गया',
+            en: 'Reading corner set up in class 5',
+          },
+          desc: {
+            hi: 'दान में मिली किताबों से कक्षा के कोने में पठन कोना बनाया गया। अब बच्चे हर दोपहर बीस मिनट बारी-बारी से पढ़कर सुनाते हैं। शुरुआत में छह बच्चे ही आगे आए, अब पूरी कक्षा भाग लेती है।',
+            en: 'We built a reading corner from donated books. The children now read aloud in turns for twenty minutes every afternoon. Six joined in at first; the whole class takes part now.',
+          },
+          date: '2026-09-01',
+          photo: 'reading',
+          photoId: 'p-reading-rampur',
+          participants: 32,
+          students: ['s1', 's2'],
+          status: 'DRAFT',
+          visibility: 'SCHOOL',
+          requested: null,
+          clearance: 'NOT_REQUIRED',
+          target: null,
+          attestedBy: null,
+          risk: [],
+          score: 0,
+        },
+        {
+          id: 'a2',
+          title: {
+            hi: 'विद्यालय की बगिया में पालक बोई गई',
+            en: 'Spinach planted in the school garden',
+          },
+          desc: {
+            hi: 'कक्षा 4 के बच्चों ने विद्यालय की बगिया में पालक और धनिया बोया। हर सुबह बारी-बारी से पानी देते हैं। मध्याह्न भोजन में यही पालक इस्तेमाल होगी।',
+            en: 'Class 4 planted spinach and coriander in the school garden and water it in turns each morning. It will go into the midday meal.',
+          },
+          date: '2026-08-18',
+          photo: 'garden',
+          // The same photograph another school has already used. This is the
+          // cheap fraud, so it is the one the demo makes visible.
+          photoId: 'p-garden-shared',
+          participants: 26,
+          students: ['s3'],
+          status: 'DRAFT',
+          visibility: 'SCHOOL',
+          requested: null,
+          clearance: 'NOT_REQUIRED',
+          target: null,
+          attestedBy: null,
+          risk: [],
+          score: 0,
+        },
+      ],
+
+      // Photographs already on the platform, so the duplicate check has
+      // something to find.
+      knownPhotos: [{ id: 'p-garden-shared', school: 'OTHER', on: '2026-07-11' }],
+    };
+  }
+
+  var S = load();
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && parsed.activities && parsed.students && parsed.school) return parsed;
+      }
+    } catch (e) {
+      /* private browsing, or storage blocked by policy — start fresh */
+    }
+    return seed();
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(S));
+    } catch (e) {
+      /* not being able to remember is a small loss, not an error */
+    }
+  }
+
+  function t(key) {
+    return COPY[S.lang][key];
+  }
+
+  function loc(value) {
+    return value && typeof value === 'object' ? value[S.lang] : value;
+  }
+
+  function esc(str) {
+    return String(str).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function fmtDate(iso) {
+    var d = new Date(iso + 'T00:00:00');
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString(S.lang === 'hi' ? 'hi-IN' : 'en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+
+  // -------------------------------------------------------------------
+  // The rules. The same ones the platform enforces server-side —
+  // reproduced here so a tester can feel them, not so they are secure.
+  // -------------------------------------------------------------------
+
+  var VIS_RANK = { SCHOOL: 10, BLOCK: 20, DISTRICT: 30, PUBLIC: 40 };
+
+  /** The highest visibility each role may approve. */
+  function ceiling(role) {
+    if (role === 'DISTRICT') return 'PUBLIC';
+    if (role === 'BLOCK' || role === 'HEAD') return 'DISTRICT';
+    return null;
+  }
+
+  function canApprove(role, vis) {
+    var c = ceiling(role);
+    return !!c && VIS_RANK[vis] <= VIS_RANK[c];
+  }
+
+  /** How much of an unflagged school's work a block officer sees. */
+  var SAMPLE_RATE = { NEW: 1, STANDARD: 0.3, TRUSTED: 0.1, WATCH: 1 };
+
+  function studentById(id) {
+    for (var i = 0; i < S.students.length; i++) {
+      if (S.students[i].id === id) return S.students[i];
+    }
+    return null;
+  }
+
+  /**
+   * Everything about this activity a human might want to look at before it
+   * leaves the school. Each check is cheap and each one is fallible: none of
+   * them rejects anything, they decide where attention goes.
+   */
+  function assessRisk(act) {
+    var flags = [];
+
+    // The cheap fraud is recycling a photograph, so this is the check worth
+    // having — and the strongest single signal when it fires.
+    for (var i = 0; i < S.knownPhotos.length; i++) {
+      var known = S.knownPhotos[i];
+      if (known.id === act.photoId) {
+        flags.push({
+          code: known.school === 'OTHER' ? 'PHOTO_REUSED_OTHER_SCHOOL' : 'PHOTO_REUSED_OWN_SCHOOL',
+          weight: known.school === 'OTHER' ? 50 : 25,
+          on: known.on,
+        });
+      }
+    }
+
+    var roster = S.students.length;
+    if (act.participants && roster > 0 && act.participants > roster) {
+      flags.push({ code: 'COUNT_EXCEEDS_ROSTER', weight: 30, n: act.participants, roster: roster });
+    }
+
+    var day = new Date(act.date + 'T00:00:00Z').getUTCDay();
+    if (day === 0) flags.push({ code: 'NON_WORKING_DAY', weight: 5 });
+
+    var noConsent = act.students.filter(function (id) {
+      var s = studentById(id);
+      return !s || s.consent !== 'GRANTED';
+    }).length;
+    if (noConsent > 0) flags.push({ code: 'CONSENT_GAPS', weight: 15, n: noConsent });
+
+    if (S.school.cleared === 0) flags.push({ code: 'FIRST_SUBMISSION', weight: 5 });
+
+    var score = flags.reduce(function (sum, f) {
+      return sum + f.weight;
+    }, 0);
+    return { flags: flags, score: score };
+  }
+
+  function flagText(flag) {
+    var hi = {
+      PHOTO_REUSED_OTHER_SCHOOL:
+        'यह फ़ोटो किसी दूसरे विद्यालय पहले ही इस्तेमाल कर चुका है (' + (flag.on || '') + ')।',
+      PHOTO_REUSED_OWN_SCHOOL: 'यह फ़ोटो इसी विद्यालय पहले भी लगा चुका है।',
+      COUNT_EXCEEDS_ROSTER:
+        flag.n + ' प्रतिभागी लिखे हैं, पर विद्यालय में ' + flag.roster + ' ही बच्चे दर्ज हैं।',
+      NON_WORKING_DAY: 'दिनांक रविवार का है।',
+      CONSENT_GAPS: flag.n + ' नामित बच्चे की अभिभावक सहमति दर्ज नहीं है।',
+      FIRST_SUBMISSION: 'यह विद्यालय का पहला काम है जो चारदीवारी से बाहर जा रहा है।',
+    };
+    var en = {
+      PHOTO_REUSED_OTHER_SCHOOL:
+        'This photograph has already been used by another school (' + (flag.on || '') + ').',
+      PHOTO_REUSED_OWN_SCHOOL: 'This photograph was already used by this school.',
+      COUNT_EXCEEDS_ROSTER:
+        flag.n + ' participants recorded, but the school has ' + flag.roster + ' children.',
+      NON_WORKING_DAY: 'Dated on a Sunday.',
+      CONSENT_GAPS: flag.n + ' named child has no guardian consent on file.',
+      FIRST_SUBMISSION: "The school's first work going beyond its own walls.",
+    };
+    return (S.lang === 'hi' ? hi : en)[flag.code] || flag.code;
+  }
+
+  // -------------------------------------------------------------------
+  // Illustrations. Drawn rather than photographed, on purpose: a demo
+  // should never invite anyone to upload a picture of a real child.
+  // -------------------------------------------------------------------
+  function illustration(kind) {
+    var scenes = {
+      reading: [
+        '<rect width="120" height="90" fill="#e4ede9"/>',
+        '<rect x="0" y="66" width="120" height="24" fill="#d3c6ab"/>',
+        '<rect x="8" y="26" width="30" height="40" rx="2" fill="#1b4b3e"/>',
+        '<rect x="11" y="30" width="24" height="7" fill="#fbf9f4"/>',
+        '<rect x="11" y="41" width="24" height="7" fill="#fbf9f4"/>',
+        '<rect x="11" y="52" width="24" height="7" fill="#fbf9f4"/>',
+        '<circle cx="60" cy="46" r="8" fill="#c4791f"/>',
+        '<path d="M50 66c0-6 4.5-11 10-11s10 5 10 11z" fill="#1b6b4a"/>',
+        '<circle cx="84" cy="49" r="7" fill="#a3672c"/>',
+        '<path d="M75 66c0-5 4-9 9-9s9 4 9 9z" fill="#2f7a64"/>',
+        '<path d="M96 40h18v14H96z" fill="#fbf9f4" stroke="#1b4b3e" stroke-width="1.5"/>',
+        '<path d="M105 40v14" stroke="#1b4b3e" stroke-width="1.5"/>',
+      ],
+      garden: [
+        '<rect width="120" height="90" fill="#dfe9dd"/>',
+        '<rect x="0" y="58" width="120" height="32" fill="#8a6f4a"/>',
+        '<circle cx="98" cy="20" r="10" fill="#c4791f"/>',
+        '<path d="M18 58c0-8 3-14 3-14s3 6 3 14z" fill="#1b6b4a"/>',
+        '<path d="M12 58c2-6 6-9 6-9M27 58c-2-6-6-9-6-9" stroke="#1b6b4a" stroke-width="2.5" fill="none"/>',
+        '<path d="M44 58c0-8 3-14 3-14s3 6 3 14z" fill="#1b6b4a"/>',
+        '<path d="M38 58c2-6 6-9 6-9M53 58c-2-6-6-9-6-9" stroke="#1b6b4a" stroke-width="2.5" fill="none"/>',
+        '<path d="M70 58c0-8 3-14 3-14s3 6 3 14z" fill="#1b6b4a"/>',
+        '<circle cx="96" cy="50" r="7" fill="#a3672c"/>',
+        '<path d="M86 70c0-6 4.5-11 10-11s10 5 10 11z" fill="#2f7a64"/>',
+        '<path d="M104 56l8 6" stroke="#5a4326" stroke-width="3"/>',
+      ],
+      board: [
+        '<rect width="120" height="90" fill="#e8e4d6"/>',
+        '<rect x="0" y="70" width="120" height="20" fill="#9caf88"/>',
+        '<rect x="16" y="14" width="88" height="50" rx="2" fill="#1b4b3e"/>',
+        '<rect x="20" y="18" width="80" height="42" rx="1" fill="none" stroke="#f7f3e8" stroke-width="1.5"/>',
+        '<path d="M28 30h58M28 38h44M28 50h34" stroke="#f7f3e8" stroke-width="2.5" stroke-linecap="round"/>',
+        '<path d="M74 50h14" stroke="#e8a33d" stroke-width="2.5" stroke-linecap="round"/>',
+        '<rect x="52" y="64" width="16" height="8" fill="#8a6f4a"/>',
+      ],
+    };
+    var body = (scenes[kind] || scenes.reading).join('');
+    return (
+      '<svg viewBox="0 0 120 90" role="img" aria-label="' +
+      esc(S.lang === 'hi' ? 'प्रदर्शन हेतु बनाई गई तस्वीर' : 'Illustration used for the demo') +
+      '" preserveAspectRatio="xMidYMid slice">' +
+      body +
+      '</svg>'
+    );
+  }
+
+  function icon(name) {
+    var paths = {
+      home: '<path d="M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5"/>',
+      roster: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/>',
+      queue: '<path d="M4 6h16M4 12h16M4 18h9"/><circle cx="19" cy="18" r="2.5"/>',
+      claims: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
+      showcase: '<path d="M3 20h18M5 20V9l7-5 7 5v11M10 20v-6h4v6"/>',
+    };
+    return (
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      (paths[name] || '') +
+      '</svg>'
+    );
+  }
+
+  // -------------------------------------------------------------------
+  // The two walkthroughs. Genuine sequences, so they are numbered.
+  // -------------------------------------------------------------------
+  var TRACKS = {
+    join: {
+      hi: [
+        { id: 'claimRaised', text: 'नए प्रधानाध्यापक बनकर अपने विद्यालय का UDISE कोड डालिए और दावा भेजिए।' },
+        { id: 'claimBlocked', text: 'वापस उसी भूमिका में देखिए — पुष्टि होने तक कुछ भी दर्ज नहीं हो सकता।' },
+        { id: 'claimVerified', text: 'खंड शिक्षा अधिकारी बनकर दावे की पुष्टि कीजिए। तभी विद्यालय बनता है।' },
+      ],
+      en: [
+        { id: 'claimRaised', text: "As the new head teacher, enter your school's UDISE code and send the claim." },
+        { id: 'claimBlocked', text: 'Look again in that role — nothing can be recorded until it is confirmed.' },
+        { id: 'claimVerified', text: 'As the block officer, verify the claim. Only then does the school exist.' },
+      ],
+    },
+    out: {
+      hi: [
+        { id: 'submitted', text: 'शिक्षक बनकर “पठन कोना” गतिविधि प्रधानाध्यापक को भेजिए।' },
+        { id: 'attestNeeded', text: 'प्रधानाध्यापक बनकर बिना प्रमाणन के भेजने की कोशिश कीजिए।' },
+        { id: 'attested', text: 'प्रमाणन पढ़कर पुष्टि कीजिए और खंड स्तर पर भेजिए।' },
+        { id: 'stillSchool', text: 'ध्यान दीजिए — काम अभी भी सिर्फ़ विद्यालय तक दिख रहा है।' },
+        { id: 'blockCleared', text: 'खंड अधिकारी बनकर जाँच सूची देखिए और स्वीकृत कीजिए।' },
+        { id: 'publicBlocked', text: 'जनपद अधिकारी बनकर सार्वजनिक करने की कोशिश कीजिए — सहमति के बिना रुकेगा।' },
+        { id: 'consentGiven', text: 'शिक्षक बनकर अंजलि के अभिभावक की सहमति दर्ज कीजिए।' },
+        { id: 'published', text: 'अब जनपद अधिकारी बनकर सार्वजनिक कीजिए। प्रदर्शनी में सिर्फ़ पहला नाम दिखेगा।' },
+        { id: 'withdrawn', text: 'सहमति वापस लीजिए। फ़ोटो उसी क्षण प्रदर्शनी से हट जाएगी।' },
+      ],
+      en: [
+        { id: 'submitted', text: 'As the teacher, send the reading-corner activity to the head teacher.' },
+        { id: 'attestNeeded', text: 'As the head teacher, try to send it on without attesting.' },
+        { id: 'attested', text: 'Read the attestation, confirm it, and send it to block level.' },
+        { id: 'stillSchool', text: 'Notice it is still visible only inside the school.' },
+        { id: 'blockCleared', text: 'As the block officer, open the clearance queue and clear it.' },
+        { id: 'publicBlocked', text: 'As the district officer, try to make it public — consent will stop you.' },
+        { id: 'consentGiven', text: "As the teacher, record consent from Anjali's guardian." },
+        { id: 'published', text: 'Publish publicly. The showcase shows the given name only.' },
+        { id: 'withdrawn', text: 'Withdraw consent. The photograph leaves the showcase at once.' },
+      ],
+    },
+  };
+
+  var WHY = {
+    hi: {
+      welcome: {
+        h: 'शुरू कीजिए',
+        p: 'ऊपर कोई एक पटरी चुनिए और नीचे दिए कदमों का पालन कीजिए। हर कार्रवाई के बाद यहाँ बताया जाएगा कि नियम ने क्या किया और क्यों।',
+      },
+      claimRaised: {
+        h: 'विद्यालय बनाया नहीं जाता, उस पर दावा किया जाता है',
+        p: 'UDISE कोड पहले से मौजूद है — हर विद्यालय के बोर्ड पर लिखा है। दावा भेजने से न विद्यालय बनता है, न कोई खाता। फ़ैसला खंड कार्यालय करता है, क्योंकि उसी स्तर पर कोई सचमुच जानता है कि प्रधानाध्यापक कौन है।',
+      },
+      claimBlocked: {
+        h: 'पुष्टि से पहले कुछ भी नहीं',
+        p: 'अपुष्ट विद्यालय में न बच्चा दर्ज हो सकता है, न गतिविधि, न फ़ोटो। इसीलिए किसी विद्यालय पर झूठा दावा करके इंतज़ार करने से कुछ हासिल नहीं होता।',
+      },
+      claimVerified: {
+        h: 'एक ही कार्रवाई में तीन काम',
+        p: 'पुष्टि होते ही विद्यालय बनता है, दावा करने वाले प्रधानाध्यापक बनते हैं, और पूरा रिकॉर्ड अधिकारी के नाम से दर्ज होता है। नया विद्यालय “निगरानी” श्रेणी में नहीं, पर उसका सारा काम शुरू में पूरी जाँच से गुज़रता है।',
+      },
+      submitted: {
+        h: 'शिक्षक स्वयं प्रकाशित नहीं कर सकता',
+        p: 'शिक्षक केवल अनुरोध करता है। यह पहला नियम है — कोई भी काम किसी दूसरे व्यक्ति की समीक्षा के बिना बाहर नहीं जाता।',
+      },
+      attestNeeded: {
+        h: 'बटन नहीं, कथन',
+        p: 'विद्यालय के भीतर प्रकाशित करने के लिए प्रधानाध्यापक की स्वीकृति काफ़ी है। बाहर भेजने के लिए उन्हें नाम और तिथि के साथ एक स्पष्ट कथन पर पुष्टि देनी होती है। “प्रकाशित करें” दबाना और यह कहना कि “मैं प्रमाणित करता हूँ” — दो अलग बातें हैं, और लोग इन्हें अलग तरह लेते हैं।',
+      },
+      attested: {
+        h: 'अब किसी का नाम इस पर है',
+        p: 'प्रमाणन संग्रहीत होता है और खंड अधिकारी को गतिविधि के साथ दिखता है। कभी सवाल उठे तो “यह किसने कहा कि ऐसा हुआ” का जवाब मौजूद रहता है।',
+      },
+      stillSchool: {
+        h: 'जितना स्वीकृत, उतना ही दिखता है',
+        p: 'प्रमाणन हो चुका है, पर खंड की जाँच बाक़ी है — इसलिए काम अभी विद्यालय तक ही दिखता है। कोई भी गतिविधि उस स्तर से ऊपर कभी नहीं दिखती जितनी स्वीकृत हुई है।',
+      },
+      blockCleared: {
+        h: 'सबकी जाँच असंभव है, इसलिए जाँच चुनकर होती है',
+        p: 'दो सौ विद्यालयों वाला खंड अधिकारी हर गतिविधि नहीं देख सकता। इसलिए नए विद्यालय का सारा काम देखा जाता है, साफ़ रिकॉर्ड वाले का दस प्रतिशत — पर जिस पर कोई संकेत हो, वह हमेशा देखा जाता है। सूची आने के क्रम में नहीं, जोखिम के क्रम में लगती है।',
+      },
+      publicBlocked: {
+        h: 'सहमति के बिना सार्वजनिक नहीं',
+        p: 'जिस बच्चे का नाम लिया गया है, उसके अभिभावक की सहमति दर्ज नहीं है। असली मंच पर यह जाँच प्रकाशन के ठीक उसी क्षण, डेटाबेस के भीतर दोबारा होती है।',
+      },
+      consentGiven: {
+        h: 'सहमति एक रिकॉर्ड है, टिक-मार्क नहीं',
+        p: 'किसने दी, किस रूप में, किसने दर्ज की और कब — सब लिखा जाता है। पुराना रिकॉर्ड मिटता नहीं, उसके ऊपर नया जुड़ता है।',
+      },
+      published: {
+        h: 'सिर्फ़ पहला नाम',
+        p: '“अंजलि, कक्षा 5” से गाँव अपनी बच्ची को पहचान लेता है। “अंजलि कुमारी, कक्षा 5, प्रा॰वि॰ रामपुर, श्रावस्ती” से कोई अजनबी उसे ढूँढ़ सकता है। यही फ़र्क़ पूरे मंच की सबसे बड़ी शर्त है।',
+      },
+      withdrawn: {
+        h: 'वापसी तुरंत लागू होती है',
+        p: 'सहमति वापस लेते ही वही एक कार्रवाई सारी सार्वजनिक फ़ोटो हटा देती है — न कतार, न 48 घंटे की समीक्षा। रिकॉर्ड विद्यालय के पास रहता है, पर बाहर दिखना बंद।',
+      },
+      returned: {
+        h: 'वापस भेजने पर विद्यालय निगरानी में आ जाता है',
+        p: 'खंड से एक बार काम वापस हुआ तो छह महीने तक उस विद्यालय का सारा काम पूरी जाँच से गुज़रेगा। साफ़ रिकॉर्ड से छूट मिलती है, और एक गड़बड़ी से वह छूट चली जाती है।',
+      },
+      photoReused: {
+        h: 'यही असली नक़ल है',
+        p: 'पुरानी या किसी और की फ़ोटो दोबारा लगाना — यही वह नक़ल है जो सचमुच होती है, क्योंकि यह मुफ़्त है। हर फ़ोटो का एक दृश्य-चिह्न बनता है, इसलिए दोबारा इस्तेमाल पकड़ा जाता है। यह अपने आप कुछ रोकता नहीं, अधिकारी को दिखा देता है।',
+      },
+    },
+    en: {
+      welcome: {
+        h: 'Start here',
+        p: 'Pick a track above and follow the steps. After each action this panel explains what the rule did, and why.',
+      },
+      claimRaised: {
+        h: 'A school is claimed, not created',
+        p: 'The UDISE code already exists — it is on every school board. Raising a claim creates neither a school nor an account. The block office decides, because that is the level at which somebody actually knows who the head teacher is.',
+      },
+      claimBlocked: {
+        h: 'Nothing at all until it is confirmed',
+        p: 'An unconfirmed school holds no children, no activities and no photographs. There is nothing to gain by claiming a school falsely and waiting.',
+      },
+      claimVerified: {
+        h: 'Three things in one action',
+        p: 'Verifying creates the school, appoints the claimant as its head teacher, and records the whole thing against the officer’s name. A new school is not under suspicion, but all of its work is reviewed until it has a record.',
+      },
+      submitted: {
+        h: 'A teacher cannot publish their own work',
+        p: 'A teacher can only ask. That is the first rule: nothing goes out without a second person reviewing it.',
+      },
+      attestNeeded: {
+        h: 'A statement, not a button',
+        p: 'A head teacher’s approval is enough to publish inside the school. To send work out they must confirm a specific statement in their own name, dated. Pressing "publish" and saying "I confirm this happened" are different acts, and people treat them differently.',
+      },
+      attested: {
+        h: 'Somebody’s name is on it now',
+        p: 'The attestation is stored and shown to the block officer alongside the activity. If anyone ever asks "who said this happened", there is an answer.',
+      },
+      stillSchool: {
+        h: 'Visible only as far as it has been cleared',
+        p: 'It is attested but the block has not looked yet, so it is still visible only inside the school. An activity is never visible above the level actually cleared.',
+      },
+      blockCleared: {
+        h: 'Reviewing everything is not real, so review is rationed',
+        p: 'A block officer with two hundred schools cannot read every activity. So a new school has all of its work reviewed and a school with a clean record one tenth of it — but anything carrying a flag is always reviewed. The queue is ordered by risk, not by arrival.',
+      },
+      publicBlocked: {
+        h: 'No consent, no public publication',
+        p: 'A child named here has no guardian consent recorded. On the real platform this check runs again inside the database at the moment of publishing.',
+      },
+      consentGiven: {
+        h: 'Consent is a record, not a checkbox',
+        p: 'Who gave it, how, who wrote it down, and when. A new decision supersedes the old one rather than erasing it.',
+      },
+      published: {
+        h: 'Given name only',
+        p: '"Anjali, Class 5" lets a village recognise its own child. "Anjali Kumari, Class 5, Primary School Rampur, Shravasti" lets a stranger find her. That distinction is the biggest single constraint in the platform.',
+      },
+      withdrawn: {
+        h: 'Withdrawal takes effect at once',
+        p: 'One action pulls every public photograph back — no queue, no 48-hour review. The record stays with the school; it simply stops being visible outside.',
+      },
+      returned: {
+        h: 'Work sent back puts the school under watch',
+        p: 'Once the block returns something, every piece of that school’s work is fully reviewed for six months. A clean record earns lighter oversight, and one problem costs it.',
+      },
+      photoReused: {
+        h: 'This is the fraud that actually happens',
+        p: 'Reusing an old photograph, or a colleague’s, is the cheap fraud — which is why it is the common one. Every image carries a visual fingerprint, so reuse is caught. It stops nothing by itself; it shows the officer where to look.',
+      },
+    },
+  };
+
+  // -------------------------------------------------------------------
+  // Rendering
+  // -------------------------------------------------------------------
+  var screenEl = document.getElementById('screen');
+  var toastTimer = null;
+
+  function toast(msg) {
+    var old = document.querySelector('.toast');
+    if (old) old.remove();
+    var el = document.createElement('div');
+    el.className = 'toast';
+    el.setAttribute('role', 'status');
+    el.textContent = msg;
+    document.body.appendChild(el);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () {
+      el.remove();
+    }, 4200);
+  }
+
+  function clearToast() {
+    var old = document.querySelector('.toast');
+    if (old) old.remove();
+    clearTimeout(toastTimer);
+  }
+
+  function markDone(id) {
+    S.done[id] = true;
+    S.why = id;
+  }
+
+  function render() {
+    document.documentElement.lang = S.lang;
+    document.getElementById('banner').textContent = t('banner');
+    document.getElementById('lang-toggle').textContent = t('langBtn');
+    document.getElementById('reset').textContent = t('reset');
+    document.getElementById('topbar-sub').textContent =
+      S.role === 'CLAIMANT' ? '—' : loc(S.school.name);
+    document.getElementById('rail-eyebrow').textContent = t('railEyebrow');
+    document.getElementById('rail-title').textContent = t('railTitle');
+    document.getElementById('rail-intro').textContent = t('railIntro');
+    document.getElementById('role-note').textContent = t('roleNote');
+    document.getElementById('why-title').textContent = t('whyTitle');
+    document.getElementById('about-summary').textContent = t('aboutSummary');
+    document.getElementById('about-body').innerHTML = t('aboutBody');
+
+    renderTracks();
+    renderRoles();
+    renderSteps();
+    renderWhy();
+    renderTabs();
+    renderScreen();
+    save();
+  }
+
+  function renderTracks() {
+    var tracks = [
+      { id: 'join', name: t('trackJoin'), sub: t('trackJoinSub') },
+      { id: 'out', name: t('trackOut'), sub: t('trackOutSub') },
+    ];
+    document.getElementById('tracks').innerHTML = tracks
+      .map(function (track) {
+        return (
+          '<button class="track" type="button" data-track="' +
+          track.id +
+          '" aria-pressed="' +
+          (S.track === track.id) +
+          '">' +
+          esc(track.name) +
+          '<small>' +
+          esc(track.sub) +
+          '</small></button>'
+        );
+      })
+      .join('');
+  }
+
+  function renderRoles() {
+    // Only the roles the chosen track actually needs, so the chip row does not
+    // become a menu of five people nobody is playing.
+    var roles =
+      S.track === 'join'
+        ? [
+            { id: 'CLAIMANT', name: t('roleClaimant'), who: t('roleClaimantWho') },
+            { id: 'BLOCK', name: t('roleBlock'), who: t('roleBlockWho') },
+          ]
+        : [
+            { id: 'TEACHER', name: t('roleTeacher'), who: t('roleTeacherWho') },
+            { id: 'HEAD', name: t('roleHead'), who: t('roleHeadWho') },
+            { id: 'BLOCK', name: t('roleBlock'), who: t('roleBlockWho') },
+            { id: 'DISTRICT', name: t('roleDistrict'), who: t('roleDistrictWho') },
+          ];
+    document.getElementById('roles').innerHTML = roles
+      .map(function (r) {
+        return (
+          '<button class="role" type="button" data-role="' +
+          r.id +
+          '" aria-pressed="' +
+          (S.role === r.id) +
+          '"><strong>' +
+          esc(r.name) +
+          '</strong><span class="faint">' +
+          esc(r.who) +
+          '</span></button>'
+        );
+      })
+      .join('');
+  }
+
+  function renderSteps() {
+    var list = TRACKS[S.track][S.lang];
+    document.getElementById('steps-title').textContent =
+      S.track === 'join' ? t('trackJoin') : t('trackOut');
+
+    var nextIndex = list.length;
+    for (var i = 0; i < list.length; i++) {
+      if (!S.done[list[i].id]) {
+        nextIndex = i;
+        break;
+      }
+    }
+    document.getElementById('steps').innerHTML = list
+      .map(function (step, i) {
+        var cls = S.done[step.id] ? 'step step--done' : i === nextIndex ? 'step step--now' : 'step';
+        return (
+          '<li class="' +
+          cls +
+          '"><span class="step__n" aria-hidden="true">' +
+          (S.done[step.id] ? '✓' : i + 1) +
+          '</span><span>' +
+          esc(step.text) +
+          '</span></li>'
+        );
+      })
+      .join('');
+  }
+
+  function renderWhy() {
+    var w = WHY[S.lang][S.why] || WHY[S.lang].welcome;
+    document.getElementById('why-body').innerHTML =
+      '<div class="why"><strong>' + esc(w.h) + '</strong>' + esc(w.p) + '</div>';
+  }
+
+  function renderTabs() {
+    var tabs = [];
+    if (S.role === 'CLAIMANT') {
+      tabs = [{ id: 'claim', label: t('claimTitle'), ic: 'claims' }];
+    } else if (S.role === 'BLOCK') {
+      tabs = [
+        { id: 'claims', label: t('tabClaims'), ic: 'claims' },
+        { id: 'queue', label: t('tabQueue'), ic: 'queue' },
+        { id: 'showcase', label: t('tabShowcase'), ic: 'showcase' },
+      ];
+    } else if (S.role === 'DISTRICT') {
+      tabs = [
+        { id: 'home', label: t('tabHome'), ic: 'home' },
+        { id: 'showcase', label: t('tabShowcase'), ic: 'showcase' },
+      ];
+    } else {
+      tabs = [
+        { id: 'home', label: t('tabHome'), ic: 'home' },
+        { id: 'roster', label: t('tabRoster'), ic: 'roster' },
+        { id: 'showcase', label: t('tabShowcase'), ic: 'showcase' },
+      ];
+    }
+    var valid = tabs.some(function (tab) {
+      return tab.id === S.tab;
+    });
+    if (!valid) S.tab = tabs[0].id;
+
+    document.getElementById('tabbar').innerHTML = tabs
+      .map(function (tab) {
+        return (
+          '<button type="button" data-tab="' +
+          tab.id +
+          '"' +
+          (S.tab === tab.id ? ' aria-current="page"' : '') +
+          '>' +
+          icon(tab.ic) +
+          '<span>' +
+          esc(tab.label) +
+          '</span></button>'
+        );
+      })
+      .join('');
+  }
+
+  function statusTag(act) {
+    var cls = {
+      DRAFT: 'tag',
+      PENDING: 'tag tag--warn',
+      PUBLISHED: 'tag tag--ok',
+      REJECTED: 'tag tag--stop',
+    }[act.status];
+    return '<span class="' + cls + '">' + esc(t('status' + act.status)) + '</span>';
+  }
+
+  function clearanceTag(act) {
+    if (act.clearance === 'NOT_REQUIRED') return '';
+    var cls = {
+      AWAITING_BLOCK: 'tag tag--warn',
+      AUTO_CLEARED: 'tag tag--board',
+      CLEARED: 'tag tag--ok',
+      RETURNED: 'tag tag--stop',
+    }[act.clearance];
+    return '<span class="' + cls + '">' + esc(t('clear' + act.clearance)) + '</span>';
+  }
+
+  function consentTag(student) {
+    var key = student.consent || 'NONE';
+    var cls = {
+      GRANTED: 'tag tag--ok',
+      DENIED: 'tag tag--stop',
+      REVOKED: 'tag tag--stop',
+      NONE: 'tag tag--warn',
+    }[key];
+    return '<span class="' + cls + '">' + esc(t('consent' + key)) + '</span>';
+  }
+
+  function tierTag() {
+    var cls = {
+      NEW: 'tag tag--warn',
+      STANDARD: 'tag',
+      TRUSTED: 'tag tag--ok',
+      WATCH: 'tag tag--stop',
+    }[S.school.tier];
+    return '<span class="' + cls + '">' + esc(t('tier' + S.school.tier)) + '</span>';
+  }
+
+  function renderScreen() {
+    if (S.role === 'CLAIMANT') return renderClaim();
+    if (S.open) return renderDetail();
+    if (S.tab === 'claims') return renderClaimsQueue();
+    if (S.tab === 'queue') return renderClearanceQueue();
+    if (S.tab === 'roster') return renderRoster();
+    if (S.tab === 'showcase') return renderShowcase();
+    return renderHome();
+  }
+
+  // --- Track one: claiming a school ------------------------------------
+
+  function renderClaim() {
+    var html = '';
+
+    if (!S.claim) {
+      html +=
+        '<div><h1 class="screen__title">' +
+        esc(t('claimTitle')) +
+        '</h1><p class="screen__sub">' +
+        esc(t('claimIntro')) +
+        '</p></div>';
+      html +=
+        '<div class="card"><div class="field"><label for="udise">' +
+        esc(t('udiseLabel')) +
+        '</label><span class="faint">' +
+        esc(t('udiseHint')) +
+        '</span>' +
+        '<input id="udise" type="text" inputmode="numeric" maxlength="11" value="09460100199" /></div>' +
+        '<div class="field" style="margin-top:.6rem"><label for="sname">' +
+        esc(t('schoolNameLabel')) +
+        '</label><input id="sname" type="text" value="' +
+        esc(S.lang === 'hi' ? 'प्रा॰ वि॰ नयागाँव' : 'PS Nayagaon') +
+        '" /></div>' +
+        '<div class="field" style="margin-top:.6rem"><label for="cname">' +
+        esc(t('yourNameLabel')) +
+        '</label><input id="cname" type="text" value="' +
+        esc(S.lang === 'hi' ? 'कमला देवी' : 'Kamla Devi') +
+        '" /></div>' +
+        '<div class="field" style="margin-top:.6rem"><label for="cdesig">' +
+        esc(t('designationLabel')) +
+        '</label><input id="cdesig" type="text" value="' +
+        esc(S.lang === 'hi' ? 'प्रधानाध्यापक' : 'Head Teacher') +
+        '" /></div>' +
+        '<p class="eyebrow" style="margin-top:.9rem">' +
+        esc(t('boardPhoto')) +
+        '</p><div class="photo" style="margin:.35rem 0">' +
+        illustration('board') +
+        '</div><p class="faint">' +
+        esc(t('boardPhotoHint')) +
+        '</p>' +
+        '<button class="btn btn--primary btn--block" type="button" data-raise-claim="1" style="margin-top:.6rem">' +
+        esc(t('raiseClaim')) +
+        '</button></div>';
+      screenEl.innerHTML = html;
+      return;
+    }
+
+    if (S.claim.status === 'PENDING') {
+      html +=
+        '<div><h1 class="screen__title">' +
+        esc(loc(S.claim.name)) +
+        '</h1><p class="screen__sub">' +
+        esc(S.claim.udise) +
+        '</p></div>';
+      html += '<p class="notice notice--warn">' + esc(t('claimPending')) + '</p>';
+      html += '<div class="card"><span class="tag tag--warn">' + esc(t('pendingSchool')) + '</span>';
+      html +=
+        '<p class="muted" style="margin-top:.5rem">' +
+        esc(
+          S.lang === 'hi'
+            ? 'बच्चे जोड़ना, गतिविधि दर्ज करना, फ़ोटो भेजना — पुष्टि से पहले कुछ भी नहीं।'
+            : 'Adding children, recording activities, uploading photographs — none of it before confirmation.',
+        ) +
+        '</p>';
+      html +=
+        '<button class="btn btn--block" type="button" data-try-blocked="1" style="margin-top:.6rem">' +
+        esc(S.lang === 'hi' ? 'बच्चा जोड़ने की कोशिश कीजिए' : 'Try adding a child') +
+        '</button></div>';
+    } else {
+      html +=
+        '<div><h1 class="screen__title">' +
+        esc(loc(S.claim.name)) +
+        '</h1><p class="screen__sub">' +
+        esc(S.claim.udise) +
+        '</p></div>';
+      html += '<p class="notice notice--ok">' + esc(t('claimVerified')) + '</p>';
+      html +=
+        '<div class="card"><div class="rowline"><span>' +
+        esc(t('trustTitle')) +
+        '</span><span class="tag tag--warn">' +
+        esc(t('tierNEW')) +
+        '</span></div><p class="faint" style="margin-top:.4rem">' +
+        esc(
+          S.lang === 'hi'
+            ? 'नए विद्यालय का सारा काम शुरू में खंड कार्यालय देखता है। साफ़ रिकॉर्ड बनने पर यह घटकर दस प्रतिशत रह जाता है।'
+            : "All of a new school's work is reviewed by the block office at first. That falls to one tenth once it has a clean record.",
+        ) +
+        '</p></div>';
+    }
+
+    screenEl.innerHTML = html;
+  }
+
+  function renderClaimsQueue() {
+    var html =
+      '<div><h1 class="screen__title">' + esc(t('claimsTitle')) + '</h1></div>';
+
+    if (!S.claim || S.claim.status !== 'PENDING') {
+      html += '<p class="empty">' + esc(t('claimsEmpty')) + '</p>';
+      screenEl.innerHTML = html;
+      return;
+    }
+
+    html +=
+      '<div class="card"><div class="rowline"><div><strong>' +
+      esc(loc(S.claim.name)) +
+      '</strong><br><span class="faint">' +
+      esc(S.claim.udise) +
+      ' · ' +
+      esc(t('roleBlockWho')) +
+      '</span></div><span class="tag tag--warn">' +
+      esc(t('pendingSchool')) +
+      '</span></div>';
+
+    html +=
+      '<p class="notice" style="margin-top:.6rem">' +
+      esc(t('notInRegister')) +
+      '</p>';
+
+    html +=
+      '<div class="register" style="margin-top:.6rem"><div class="register__row"><span><strong>' +
+      esc(t('claimantSays')) +
+      '</strong> ' +
+      esc(S.claim.claimant) +
+      '</span><span>' +
+      esc(S.claim.designation) +
+      '</span></div></div>';
+
+    html +=
+      '<p class="eyebrow" style="margin-top:.7rem">' +
+      esc(t('boardPhoto')) +
+      '</p><div class="photo" style="margin-top:.3rem">' +
+      illustration('board') +
+      '</div>';
+
+    html +=
+      '<div class="row" style="margin-top:.7rem"><button class="btn btn--primary" type="button" data-verify-claim="1">' +
+      esc(t('claimVerify')) +
+      '</button><button class="btn btn--ghost" type="button" data-reject-claim="1">' +
+      esc(t('claimReject')) +
+      '</button></div></div>';
+
+    screenEl.innerHTML = html;
+  }
+
+  // --- Track two: work leaving the school -------------------------------
+
+  function renderHome() {
+    var visible = S.activities.filter(function (a) {
+      if (S.role === 'TEACHER' || S.role === 'HEAD') return true;
+      // An officer sees what has actually reached their level.
+      return VIS_RANK[a.visibility] >= (S.role === 'DISTRICT' ? VIS_RANK.DISTRICT : VIS_RANK.BLOCK);
+    });
+
+    var html =
+      '<div><h1 class="screen__title">' +
+      esc(t('tabHome')) +
+      '</h1><p class="screen__sub">' +
+      esc(loc(S.school.name)) +
+      ' · ' +
+      esc(
+        S.role === 'TEACHER'
+          ? t('roleTeacherWho')
+          : S.role === 'HEAD'
+            ? t('roleHeadWho')
+            : t('roleDistrictWho'),
+      ) +
+      '</p></div>';
+
+    if (S.role === 'HEAD') {
+      html += renderTrustCard();
+    }
+
+    if (visible.length === 0) {
+      html += '<p class="empty">' + esc(t('noActivities')) + '</p>';
+    }
+
+    visible.forEach(function (a) {
+      html +=
+        '<button class="card" type="button" data-open="' +
+        a.id +
+        '" style="text-align:start;cursor:pointer;display:block;width:100%">' +
+        '<span class="rowline"><span><strong>' +
+        esc(loc(a.title)) +
+        '</strong><br><span class="faint">' +
+        esc(fmtDate(a.date)) +
+        '</span></span>' +
+        statusTag(a) +
+        '</span>' +
+        '<span class="row" style="margin-top:.45rem">' +
+        '<span class="tag tag--board">' +
+        esc(t('vis' + a.visibility)) +
+        '</span>' +
+        clearanceTag(a) +
+        '</span></button>';
+    });
+
+    screenEl.innerHTML = html;
+  }
+
+  function renderTrustCard() {
+    var rate = Math.round(SAMPLE_RATE[S.school.tier] * 100);
+    return (
+      '<div class="card"><div class="rowline"><span class="eyebrow">' +
+      esc(t('trustTitle')) +
+      '</span>' +
+      tierTag() +
+      '</div>' +
+      '<div class="row" style="margin-top:.4rem;gap:1rem">' +
+      '<span class="meter">' +
+      esc(t('trustCleared')) +
+      ' <strong>' +
+      S.school.cleared +
+      '</strong></span>' +
+      '<span class="meter">' +
+      esc(t('trustReturned')) +
+      ' <strong>' +
+      S.school.returned +
+      '</strong></span>' +
+      '<span class="meter">' +
+      esc(t('trustSample')) +
+      ' <strong>' +
+      rate +
+      '%</strong></span>' +
+      '</div></div>'
+    );
+  }
+
+  function renderDetail() {
+    var act = S.activities.filter(function (a) {
+      return a.id === S.open;
+    })[0];
+    if (!act) {
+      S.open = null;
+      return renderScreen();
+    }
+
+    var html = '';
+    html +=
+      '<button class="btn btn--ghost btn--sm" type="button" data-back="1" style="align-self:flex-start">← ' +
+      esc(t('back')) +
+      '</button>';
+
+    html +=
+      '<div><h1 class="screen__title">' +
+      esc(loc(act.title)) +
+      '</h1><p class="screen__sub">' +
+      esc(fmtDate(act.date)) +
+      ' · ' +
+      esc(t('author')) +
+      ': ' +
+      esc(t('roleTeacherWho')) +
+      '</p></div>';
+
+    html +=
+      '<div class="row">' +
+      statusTag(act) +
+      '<span class="tag tag--board">' +
+      esc(t('vis' + act.visibility)) +
+      '</span>' +
+      clearanceTag(act) +
+      '</div>';
+
+    if (act.status === 'REJECTED' && act.reason) {
+      html +=
+        '<p class="notice notice--stop">' + esc(t('reject')) + ': ' + esc(act.reason) + '</p>';
+    }
+
+    html += '<div class="photo">' + illustration(act.photo) + '</div>';
+    html += '<p style="white-space:pre-wrap">' + esc(loc(act.desc)) + '</p>';
+
+    if (act.students.length) {
+      html += '<div class="card"><p class="eyebrow">' + esc(t('recognised')) + '</p>';
+      act.students.forEach(function (id) {
+        var s = studentById(id);
+        if (!s) return;
+        html +=
+          '<div class="rowline" style="margin-top:.4rem"><span>' +
+          esc(loc(s.name)) +
+          ' <span class="faint">' +
+          esc(t('classLabel')) +
+          ' ' +
+          esc(s.cls) +
+          '</span></span>' +
+          consentTag(s) +
+          '</div>';
+      });
+      html += '</div>';
+    }
+
+    if (act.attestedBy) {
+      html +=
+        '<div class="register"><div class="register__row"><span><strong>' +
+        esc(t('attestedBy')) +
+        '</strong> ' +
+        esc(act.attestedBy) +
+        '</span><span class="stamp">' +
+        esc(S.lang === 'hi' ? 'प्रमाणित' : 'Attested') +
+        '</span></div></div>';
+    }
+
+    // --- Teacher: send to the head teacher -------------------------------
+    if (S.role === 'TEACHER' && (act.status === 'DRAFT' || act.status === 'REJECTED')) {
+      html +=
+        '<button class="btn btn--primary btn--block" type="button" data-submit="' +
+        act.id +
+        '">' +
+        esc(t('submitForReview')) +
+        '</button>';
+    }
+
+    // --- Head teacher: publish inside, or attest and send on -------------
+    if (S.role === 'HEAD' && act.status === 'PENDING') {
+      html +=
+        '<div class="card"><button class="btn btn--block" type="button" data-publish-school="' +
+        act.id +
+        '">' +
+        esc(t('publishSchool')) +
+        '</button>' +
+        '<p class="faint" style="margin-top:.4rem">' +
+        esc(
+          S.lang === 'hi'
+            ? 'विद्यालय के भीतर रखने के लिए आपकी स्वीकृति ही काफ़ी है।'
+            : 'Your approval alone is enough to keep it inside the school.',
+        ) +
+        '</p></div>';
+
+      html +=
+        '<div class="card"><p class="eyebrow">' +
+        esc(t('requestedVisibility')) +
+        '</p>' +
+        '<select id="target" style="margin-top:.3rem">' +
+        ['BLOCK', 'DISTRICT']
+          .map(function (v) {
+            return '<option value="' + v + '">' + esc(t('vis' + v)) + '</option>';
+          })
+          .join('') +
+        '</select>';
+
+      html +=
+        '<div class="attestation" style="margin-top:.7rem"><p class="eyebrow">' +
+        esc(t('attestTitle')) +
+        '</p><p>' +
+        esc(t('attestBody')) +
+        '</p>' +
+        '<label class="checkline"><input type="checkbox" id="attest" /><span>' +
+        esc(t('attestConfirm')) +
+        '</span></label></div>';
+
+      html +=
+        '<button class="btn btn--primary btn--block" type="button" data-send-on="' +
+        act.id +
+        '" style="margin-top:.6rem">' +
+        esc(t('publish')) +
+        '</button>' +
+        '<div id="blocker-slot"></div></div>';
+    }
+
+    // --- District: to the open web ---------------------------------------
+    if (S.role === 'DISTRICT' && act.status === 'PUBLISHED' && act.visibility !== 'PUBLIC') {
+      html +=
+        '<div class="card"><button class="btn btn--primary btn--block" type="button" data-make-public="' +
+        act.id +
+        '">' +
+        esc(t('visPUBLIC')) +
+        '</button><div id="blocker-slot"></div></div>';
+    }
+
+    screenEl.innerHTML = html;
+  }
+
+  function renderClearanceQueue() {
+    var pending = S.activities.filter(function (a) {
+      return a.clearance === 'AWAITING_BLOCK';
+    });
+    // Ordered by risk, not by arrival: the first screen shows what is most
+    // likely to be wrong.
+    pending.sort(function (a, b) {
+      return b.score - a.score;
+    });
+
+    var html = '<div><h1 class="screen__title">' + esc(t('queueTitle')) + '</h1></div>';
+
+    if (pending.length === 0) {
+      html += '<p class="empty">' + esc(t('queueEmpty')) + '</p>';
+      screenEl.innerHTML = html;
+      return;
+    }
+
+    pending.forEach(function (act) {
+      var severity = act.score >= 40 ? 'high' : act.score >= 15 ? 'medium' : 'low';
+      html +=
+        '<div class="card"><div class="risk risk--' +
+        severity +
+        '"><div class="rowline"><div><strong>' +
+        esc(loc(act.title)) +
+        '</strong><br><span class="faint">' +
+        esc(loc(S.school.name)) +
+        ' · ' +
+        esc(fmtDate(act.date)) +
+        '</span></div>' +
+        '<div style="text-align:end"><div class="risk__score">' +
+        act.score +
+        '</div><div class="faint">' +
+        esc(t('riskScore')) +
+        '</div></div></div>';
+
+      html +=
+        '<div class="row" style="margin-top:.4rem">' +
+        '<span class="tag ' +
+        (act.risk.length ? 'tag--stop' : 'tag--board') +
+        '">' +
+        esc(act.risk.length ? t('reasonFLAGGED') : t('reasonSAMPLED')) +
+        '</span>' +
+        tierTag() +
+        '<span class="tag">' +
+        esc(t('vis' + (act.target || 'BLOCK'))) +
+        '</span></div>';
+
+      if (act.risk.length) {
+        html +=
+          '<p class="eyebrow" style="margin-top:.5rem">' +
+          esc(t('queueWhy')) +
+          '</p><ul class="flaglist">' +
+          act.risk
+            .map(function (f) {
+              return '<li>' + esc(flagText(f)) + '</li>';
+            })
+            .join('') +
+          '</ul>';
+      }
+
+      if (act.attestedBy) {
+        html +=
+          '<div class="register" style="margin-top:.5rem"><div class="register__row"><span><strong>' +
+          esc(t('attestedBy')) +
+          '</strong> ' +
+          esc(act.attestedBy) +
+          '</span><span class="stamp">' +
+          esc(S.lang === 'hi' ? 'प्रमाणित' : 'Attested') +
+          '</span></div></div>';
+      }
+
+      html += '</div>';
+
+      html +=
+        '<div class="row" style="margin-top:.6rem"><button class="btn btn--primary btn--sm" type="button" data-clear="' +
+        act.id +
+        '">' +
+        esc(t('clear')) +
+        '</button>' +
+        '<button class="btn btn--ghost btn--sm" type="button" data-return="' +
+        act.id +
+        '">' +
+        esc(t('returnToSchool')) +
+        '</button></div>';
+
+      html +=
+        '<details style="margin-top:.4rem"><summary class="faint">' +
+        esc(t('returnReason')) +
+        '</summary><input id="rr-' +
+        act.id +
+        '" type="text" style="margin-top:.35rem" /></details>';
+
+      html += '</div>';
+    });
+
+    screenEl.innerHTML = html;
+  }
+
+  function renderRoster() {
+    var html =
+      '<div><h1 class="screen__title">' +
+      esc(t('tabRoster')) +
+      '</h1><p class="screen__sub">' +
+      esc(t('consentExplain')) +
+      '</p></div>';
+
+    S.students.forEach(function (s) {
+      html +=
+        '<div class="card"><div class="rowline"><span><strong>' +
+        esc(loc(s.name)) +
+        '</strong><br><span class="faint">' +
+        esc(t('classLabel')) +
+        ' ' +
+        esc(s.cls) +
+        ' · ' +
+        esc(t('guardianLabel')) +
+        ': ' +
+        esc(loc(s.guardian)) +
+        '</span></span>' +
+        consentTag(s) +
+        '</div>';
+
+      if (s.consent === 'GRANTED') {
+        html +=
+          '<details style="margin-top:.5rem"><summary>' +
+          esc(t('withdrawConsent')) +
+          '</summary><p class="notice notice--warn" style="margin-top:.5rem">' +
+          esc(t('withdrawWarn')) +
+          '</p><div class="field" style="margin-top:.5rem"><label for="wd-' +
+          s.id +
+          '">' +
+          esc(t('withdrawReason')) +
+          '</label><input id="wd-' +
+          s.id +
+          '" type="text" /></div>' +
+          '<button class="btn btn--stop btn--block" type="button" data-withdraw="' +
+          s.id +
+          '" style="margin-top:.5rem">' +
+          esc(t('withdrawConsent')) +
+          '</button></details>';
+      } else {
+        html +=
+          '<button class="btn btn--block" type="button" data-consent="' +
+          s.id +
+          '" style="margin-top:.5rem">' +
+          esc(t('recordConsent')) +
+          '</button>';
+      }
+      html += '</div>';
+    });
+
+    screenEl.innerHTML = html;
+  }
+
+  function renderShowcase() {
+    var pub = S.activities.filter(function (a) {
+      return a.status === 'PUBLISHED' && a.visibility === 'PUBLIC';
+    });
+
+    var html =
+      '<div><h1 class="screen__title">' +
+      esc(t('showcaseTitle')) +
+      '</h1><p class="screen__sub">' +
+      esc(t('showcaseSub')) +
+      '</p></div>';
+
+    if (!pub.length) html += '<p class="empty">' + esc(t('showcaseEmpty')) + '</p>';
+
+    pub.forEach(function (a) {
+      html +=
+        '<div class="card"><div class="photo" style="margin-bottom:.6rem">' +
+        illustration(a.photo) +
+        '</div><h2 style="font-size:1.05rem">' +
+        esc(loc(a.title)) +
+        '</h2><p class="faint">' +
+        esc(loc(S.school.name)) +
+        ' · ' +
+        esc(fmtDate(a.date)) +
+        '</p><p style="margin-top:.4rem;white-space:pre-wrap">' +
+        esc(loc(a.desc)) +
+        '</p><div class="row" style="margin-top:.6rem">';
+
+      a.students.forEach(function (id) {
+        var s = studentById(id);
+        // Only children with consent in force, and only their given name.
+        if (!s || s.consent !== 'GRANTED') return;
+        html +=
+          '<span class="tag tag--warn">' +
+          esc(loc(s.given)) +
+          ' · ' +
+          esc(t('classLabel')) +
+          ' ' +
+          esc(s.cls) +
+          '</span>';
+      });
+
+      html += '</div></div>';
+    });
+
+    if (pub.length) html += '<p class="notice">' + esc(t('surnameNote')) + '</p>';
+
+    html +=
+      '<div class="card"><p class="eyebrow">' +
+      esc(t('feedbackLabel')) +
+      '</p><p class="faint" style="margin:.2rem 0 .5rem">' +
+      esc(t('feedbackHint')) +
+      '</p><textarea id="notes">' +
+      esc(S.notes) +
+      '</textarea>' +
+      '<button class="btn btn--block" type="button" id="copy-notes" style="margin-top:.5rem">' +
+      esc(t('copyNotes')) +
+      '</button></div>';
+
+    screenEl.innerHTML = html;
+  }
+
+  // -------------------------------------------------------------------
+  // Actions
+  // -------------------------------------------------------------------
+
+  function findActivity(id) {
+    return S.activities.filter(function (a) {
+      return a.id === id;
+    })[0];
+  }
+
+  function showBlockers(lines) {
+    clearToast();
+    var slot = document.getElementById('blocker-slot');
+    var box = document.createElement('div');
+    box.className = 'notice notice--stop';
+    box.setAttribute('role', 'alert');
+    box.style.marginTop = '.6rem';
+    box.innerHTML =
+      '<ul style="margin:0;padding-inline-start:1.1rem;font-weight:500">' +
+      lines
+        .map(function (line) {
+          return '<li>' + esc(line) + '</li>';
+        })
+        .join('') +
+      '</ul>';
+    (slot || screenEl).appendChild(box);
+    box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function raiseClaim() {
+    var udise = (document.getElementById('udise') || {}).value || '09460100199';
+    var name = (document.getElementById('sname') || {}).value || 'PS Nayagaon';
+    var claimant = (document.getElementById('cname') || {}).value || 'Kamla Devi';
+    var designation = (document.getElementById('cdesig') || {}).value || 'Head Teacher';
+
+    S.claim = {
+      udise: udise,
+      name: { hi: name, en: name },
+      claimant: claimant,
+      designation: designation,
+      status: 'PENDING',
+    };
+    markDone('claimRaised');
+    toast(t('claimSent'));
+    render();
+  }
+
+  function verifyClaim() {
+    if (!S.claim) return;
+    S.claim.status = 'VERIFIED';
+    markDone('claimVerified');
+    toast(
+      S.lang === 'hi'
+        ? 'विद्यालय बन गया और दावा करने वाले प्रधानाध्यापक नियुक्त हो गए।'
+        : 'The school now exists and the claimant is its head teacher.',
+    );
+    render();
+  }
+
+  function rejectClaim() {
+    if (!S.claim) return;
+    S.claim = null;
+    toast(
+      S.lang === 'hi'
+        ? 'दावा अस्वीकार। UDISE कोड फिर से दावे के लिए खुला है।'
+        : 'Claim rejected. The UDISE code is free to be claimed again.',
+    );
+    render();
+  }
+
+  function submitActivity(id) {
+    var act = findActivity(id);
+    if (!act) return;
+    act.status = 'PENDING';
+    act.reason = null;
+    markDone('submitted');
+    toast(
+      S.lang === 'hi'
+        ? 'प्रधानाध्यापक को भेज दिया गया।'
+        : 'Sent to the head teacher.',
+    );
+    S.open = null;
+    render();
+  }
+
+  function publishInSchool(id) {
+    var act = findActivity(id);
+    if (!act) return;
+    act.status = 'PUBLISHED';
+    act.visibility = 'SCHOOL';
+    act.clearance = 'NOT_REQUIRED';
+    toast(
+      S.lang === 'hi'
+        ? 'विद्यालय के भीतर प्रकाशित। यहाँ किसी और की स्वीकृति नहीं चाहिए।'
+        : 'Published inside the school. Nobody else’s approval is needed here.',
+    );
+    S.open = null;
+    render();
+  }
+
+  function sendOn(id) {
+    var act = findActivity(id);
+    if (!act) return;
+
+    var attested = (document.getElementById('attest') || {}).checked;
+    var target = (document.getElementById('target') || {}).value || 'BLOCK';
+
+    if (!attested) {
+      markDone('attestNeeded');
+      renderWhy();
+      renderSteps();
+      save();
+      showBlockers([t('attestNeeded')]);
+      return;
+    }
+
+    var assessment = assessRisk(act);
+    act.attestedBy = t('roleHeadWho');
+    act.status = 'PUBLISHED';
+    act.target = target;
+    act.risk = assessment.flags;
+    act.score = assessment.score;
+
+    // A new school is reviewed at 100%, and a flagged activity is never
+    // sampled away — so in this demo it always waits for the block.
+    var mustReview = assessment.flags.length > 0 || Math.random() < SAMPLE_RATE[S.school.tier];
+    act.clearance = mustReview ? 'AWAITING_BLOCK' : 'AUTO_CLEARED';
+    // Never visible above the level actually cleared.
+    act.visibility = mustReview ? 'SCHOOL' : target;
+
+    markDone('attested');
+    if (mustReview) S.done.stillSchool = true;
+    S.why = 'attested';
+    S.open = null;
+
+    var reused = assessment.flags.some(function (f) {
+      return f.code.indexOf('PHOTO_REUSED') === 0;
+    });
+    if (reused) S.why = 'photoReused';
+
+    toast(
+      mustReview
+        ? S.lang === 'hi'
+          ? 'प्रमाणित। अब खंड जाँच की प्रतीक्षा — तब तक सिर्फ़ विद्यालय तक दिखेगा।'
+          : 'Attested. Waiting for block clearance — visible only inside the school until then.'
+        : S.lang === 'hi'
+          ? 'प्रमाणित और स्वतः स्वीकृत।'
+          : 'Attested and auto-cleared.',
+    );
+    render();
+  }
+
+  function clearActivity(id) {
+    var act = findActivity(id);
+    if (!act) return;
+    act.clearance = 'CLEARED';
+    act.visibility = act.target || 'BLOCK';
+    S.school.cleared += 1;
+    if (S.school.cleared >= 20) S.school.tier = 'TRUSTED';
+    else if (S.school.cleared >= 5) S.school.tier = 'STANDARD';
+    markDone('blockCleared');
+    toast(
+      S.lang === 'hi'
+        ? 'स्वीकृत। अब यह ' + t('vis' + act.visibility) + ' पर दिख रहा है।'
+        : 'Cleared. It is now visible at ' + t('vis' + act.visibility) + '.',
+    );
+    render();
+  }
+
+  function returnActivity(id) {
+    var act = findActivity(id);
+    if (!act) return;
+    var input = document.getElementById('rr-' + id);
+    var reason = input ? input.value.trim() : '';
+    if (reason.length < 3) {
+      toast(
+        S.lang === 'hi'
+          ? 'कारण लिखे बिना वापस नहीं किया जा सकता।'
+          : 'You cannot send work back without a reason.',
+      );
+      return;
+    }
+    act.clearance = 'RETURNED';
+    act.status = 'REJECTED';
+    act.visibility = 'SCHOOL';
+    act.reason = reason;
+    S.school.returned += 1;
+    S.school.tier = 'WATCH';
+    S.why = 'returned';
+    toast(
+      S.lang === 'hi'
+        ? 'विद्यालय को वापस भेजा गया। विद्यालय अब छह महीने निगरानी में है।'
+        : 'Sent back. The school is under watch for six months.',
+    );
+    render();
+  }
+
+  function makePublic(id) {
+    var act = findActivity(id);
+    if (!act) return;
+
+    var problems = [];
+    if (act.clearance !== 'CLEARED') {
+      problems.push(
+        S.lang === 'hi'
+          ? 'सार्वजनिक करने से पहले खंड अधिकारी की वास्तविक जाँच ज़रूरी है।'
+          : 'The open web needs a block officer to have actually cleared this first.',
+      );
+    }
+    var missing = act.students
+      .map(studentById)
+      .filter(function (s) {
+        return s && s.consent !== 'GRANTED';
+      })
+      .map(function (s) {
+        return loc(s.name);
+      });
+    if (missing.length) {
+      problems.push(
+        (S.lang === 'hi'
+          ? 'इनकी अभिभावक सहमति दर्ज नहीं है: '
+          : 'Guardian consent is not recorded for: ') + missing.join(', '),
+      );
+    }
+
+    if (problems.length) {
+      markDone('publicBlocked');
+      renderWhy();
+      renderSteps();
+      save();
+      showBlockers(problems);
+      return;
+    }
+
+    act.visibility = 'PUBLIC';
+    markDone('published');
+    toast(
+      S.lang === 'hi' ? 'सार्वजनिक रूप से प्रकाशित।' : 'Published publicly.',
+    );
+    S.open = null;
+    S.tab = 'showcase';
+    render();
+  }
+
+  function recordConsent(id) {
+    var s = studentById(id);
+    if (!s) return;
+    s.consent = 'GRANTED';
+    markDone('consentGiven');
+    toast(
+      S.lang === 'hi'
+        ? 'सहमति दर्ज हो गई।'
+        : 'Consent recorded.',
+    );
+    render();
+  }
+
+  function withdrawConsent(id) {
+    var s = studentById(id);
+    if (!s) return;
+    var input = document.getElementById('wd-' + id);
+    var reason = input ? input.value.trim() : '';
+    if (reason.length < 3) {
+      toast(S.lang === 'hi' ? 'कृपया कारण लिखिए।' : 'Please give a reason.');
+      return;
+    }
+    s.consent = 'REVOKED';
+
+    // The rule that matters: withdrawal reaches everything already published,
+    // in the same action, not in a queue.
+    var pulled = 0;
+    S.activities.forEach(function (a) {
+      if (a.visibility === 'PUBLIC' && a.students.indexOf(id) >= 0) {
+        a.visibility = 'DISTRICT';
+        pulled++;
+      }
+    });
+
+    markDone('withdrawn');
+    toast(
+      pulled
+        ? S.lang === 'hi'
+          ? pulled + ' सार्वजनिक गतिविधि तुरंत हटा दी गई।'
+          : pulled + ' public activity removed immediately.'
+        : S.lang === 'hi'
+          ? 'सहमति वापस ले ली गई।'
+          : 'Consent withdrawn.',
+    );
+    render();
+  }
+
+  // -------------------------------------------------------------------
+  // Wiring
+  // -------------------------------------------------------------------
+  document.addEventListener('click', function (ev) {
+    var el = ev.target.closest
+      ? ev.target.closest(
+          '[data-track],[data-role],[data-tab],[data-open],[data-back],[data-submit],' +
+            '[data-publish-school],[data-send-on],[data-make-public],[data-clear],[data-return],' +
+            '[data-consent],[data-withdraw],[data-raise-claim],[data-verify-claim],' +
+            '[data-reject-claim],[data-try-blocked],#copy-notes',
+        )
+      : null;
+    if (!el) return;
+
+    if (el.dataset.track) {
+      S.track = el.dataset.track;
+      S.role = S.track === 'join' ? 'CLAIMANT' : 'TEACHER';
+      S.open = null;
+      S.why = 'welcome';
+      return render();
+    }
+    if (el.dataset.role) {
+      S.role = el.dataset.role;
+      S.open = null;
+      return render();
+    }
+    if (el.dataset.tab) {
+      S.tab = el.dataset.tab;
+      S.open = null;
+      return render();
+    }
+    if (el.dataset.open) {
+      S.open = el.dataset.open;
+      return render();
+    }
+    if (el.dataset.back) {
+      S.open = null;
+      return render();
+    }
+
+    if (el.dataset.raiseClaim) return raiseClaim();
+    if (el.dataset.verifyClaim) return verifyClaim();
+    if (el.dataset.rejectClaim) return rejectClaim();
+    if (el.dataset.tryBlocked) {
+      markDone('claimBlocked');
+      renderWhy();
+      renderSteps();
+      save();
+      toast(
+        S.lang === 'hi'
+          ? 'पुष्टि से पहले इस विद्यालय में कुछ भी दर्ज नहीं हो सकता।'
+          : 'Nothing can be recorded at this school before it is confirmed.',
+      );
+      return;
+    }
+
+    if (el.dataset.submit) return submitActivity(el.dataset.submit);
+    if (el.dataset.publishSchool) return publishInSchool(el.dataset.publishSchool);
+    if (el.dataset.sendOn) return sendOn(el.dataset.sendOn);
+    if (el.dataset.makePublic) return makePublic(el.dataset.makePublic);
+    if (el.dataset.clear) return clearActivity(el.dataset.clear);
+    if (el.dataset.return) return returnActivity(el.dataset.return);
+    if (el.dataset.consent) return recordConsent(el.dataset.consent);
+    if (el.dataset.withdraw) return withdrawConsent(el.dataset.withdraw);
+
+    if (el.id === 'copy-notes') {
+      var area = document.getElementById('notes');
+      S.notes = area ? area.value : '';
+      save();
+      var payload =
+        'BalSanskar demo — ' +
+        new Date().toLocaleString() +
+        '\nTrack: ' +
+        S.track +
+        '\nRole: ' +
+        S.role +
+        '\nLanguage: ' +
+        S.lang +
+        '\nSteps completed: ' +
+        Object.keys(S.done).join(', ') +
+        '\n\n' +
+        S.notes;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(payload).then(
+          function () {
+            toast(t('copied'));
+          },
+          function () {
+            toast(t('copyFailed'));
+          },
+        );
+      } else {
+        toast(t('copyFailed'));
+      }
+    }
+  });
+
+  document.getElementById('lang-toggle').addEventListener('click', function () {
+    S.lang = S.lang === 'hi' ? 'en' : 'hi';
+    render();
+  });
+
+  document.getElementById('reset').addEventListener('click', function () {
+    var lang = S.lang;
+    S = seed();
+    S.lang = lang;
+    render();
+  });
+
+  document.addEventListener('input', function (ev) {
+    if (ev.target && ev.target.id === 'notes') S.notes = ev.target.value;
+  });
+
+  render();
+</script>
