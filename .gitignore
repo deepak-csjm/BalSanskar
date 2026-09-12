@@ -1,0 +1,25 @@
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+*.tsbuildinfo
+
+# env
+.env
+.env.*
+!.env.example
+
+# local artefacts
+storage/
+uploads/
+*.log
+.DS_Store
+
+# editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# prisma
+apps/api/prisma/*.db

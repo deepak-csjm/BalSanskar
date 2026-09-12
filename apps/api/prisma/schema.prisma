@@ -1,0 +1,603 @@
+// BalSanskar data model.
+//
+// Shape of the domain: Uttar Pradesh -> District -> Block -> School -> (Teachers, Students).
+// Everything a school produces (activities, achievements) hangs off the school and
+// carries denormalised districtId/blockId so that district- and block-level
+// reporting is a single indexed scan rather than a three-table join over
+// ~130,000 schools.
+//
+// Privacy stance: the only personal data held about a child is a name, class,
+// gender, guardian name and an optional guardian phone. No Aadhaar, no address,
+// no caste, no religion, no date of birth (year only), no biometrics.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enumerations (mirrored in packages/shared/src/enums.ts)
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  SUPER_ADMIN
+  STATE_ADMIN
+  DISTRICT_ADMIN
+  BLOCK_ADMIN
+  PRINCIPAL
+  TEACHER
+}
+
+enum UserStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum SchoolType {
+  PRIMARY
+  UPPER_PRIMARY
+  COMPOSITE
+  KASTURBA_GANDHI
+  OTHER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ClassLevel {
+  BALVATIKA
+  CLASS_1
+  CLASS_2
+  CLASS_3
+  CLASS_4
+  CLASS_5
+  CLASS_6
+  CLASS_7
+  CLASS_8
+}
+
+enum ActivityCategory {
+  CLASSROOM_INNOVATION
+  LEARNING_OUTCOME
+  SPORTS
+  ARTS_AND_CULTURE
+  SCIENCE_AND_MATH
+  READING_AND_LIBRARY
+  COMMUNITY_ENGAGEMENT
+  INFRASTRUCTURE_IMPROVEMENT
+  HEALTH_AND_NUTRITION
+  DIGITAL_LEARNING
+  TEACHER_DEVELOPMENT
+  ENROLMENT_DRIVE
+  OTHER
+}
+
+enum ActivityStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+enum VisibilityLevel {
+  SCHOOL
+  BLOCK
+  DISTRICT
+  STATE
+  PUBLIC
+}
+
+enum AchievementCategory {
+  ACADEMIC
+  SPORTS
+  ARTS
+  SCIENCE
+  LITERATURE
+  SOCIAL_SERVICE
+  ATTENDANCE
+  OTHER
+}
+
+enum AchievementLevel {
+  SCHOOL
+  CLUSTER
+  BLOCK
+  DISTRICT
+  STATE
+  NATIONAL
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ConsentStatus {
+  GRANTED
+  DENIED
+  REVOKED
+}
+
+enum ConsentMethod {
+  PAPER_FORM
+  VERBAL_IN_PERSON
+  DIGITAL_SELF_SERVE
+}
+
+enum MediaKind {
+  IMAGE
+  DOCUMENT
+}
+
+enum OtpPurpose {
+  LOGIN
+  REGISTRATION
+  PHONE_CHANGE
+}
+
+// ---------------------------------------------------------------------------
+// Administrative geography
+// ---------------------------------------------------------------------------
+
+model District {
+  id       String  @id @default(cuid())
+  /// Official UP district code, e.g. "09" prefixed series used by the department.
+  code     String  @unique
+  nameHi   String
+  nameEn   String
+  division String?
+
+  blocks       Block[]
+  schools      School[]
+  users        User[]
+  activities   Activity[]
+  achievements Achievement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([nameEn])
+  @@map("districts")
+}
+
+model Block {
+  id         String   @id @default(cuid())
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  code       String
+  nameHi     String
+  nameEn     String
+
+  schools      School[]
+  users        User[]
+  activities   Activity[]
+  achievements Achievement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([districtId, code])
+  @@index([districtId])
+  @@map("blocks")
+}
+
+model School {
+  id            String     @id @default(cuid())
+  /// UDISE+ code, 11 digits. The nationally recognised identifier for the school.
+  udiseCode     String     @unique
+  nameHi        String
+  nameEn        String?
+  type          SchoolType @default(PRIMARY)
+  blockId       String
+  block         Block      @relation(fields: [blockId], references: [id], onDelete: Restrict)
+  /// Denormalised from block, kept in step by the application layer, so that
+  /// district reporting never has to join through blocks.
+  districtId    String
+  district      District   @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  villageOrWard String?
+  latitude      Float?
+  longitude     Float?
+  contactPhone  String?
+  isActive      Boolean    @default(true)
+
+  users        User[]
+  students     Student[]
+  activities   Activity[]
+  achievements Achievement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([blockId])
+  @@index([districtId])
+  @@index([nameHi])
+  @@map("schools")
+}
+
+// ---------------------------------------------------------------------------
+// People
+// ---------------------------------------------------------------------------
+
+model User {
+  id     String     @id @default(cuid())
+  /// E.164, always +91XXXXXXXXXX. Doubles as the login identifier for teachers.
+  phone  String     @unique
+  email  String?    @unique
+  /// scrypt hash. Null for teachers, who authenticate by one-time code only.
+  passwordHash String?
+  fullName     String
+  role         UserRole   @default(TEACHER)
+  status       UserStatus @default(PENDING_APPROVAL)
+  designation  String?
+  employeeCode String?
+
+  /// Administrative reach. Which of these are required depends on the role and
+  /// is enforced in the application layer (see shared/rbac.requiredScopeFields).
+  schoolId   String?
+  school     School?   @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  blockId    String?
+  block      Block?    @relation(fields: [blockId], references: [id], onDelete: Restrict)
+  districtId String?
+  district   District? @relation(fields: [districtId], references: [id], onDelete: Restrict)
+
+  approvedById String?
+  approvedBy   User?   @relation("UserApprovals", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedUsers User[] @relation("UserApprovals")
+  approvedAt   DateTime?
+  statusReason String?
+
+  lastLoginAt DateTime?
+  /// Set when an administrator creates the account, cleared once the user picks
+  /// their own password.
+  mustSetPassword Boolean @default(false)
+
+  authoredActivities   Activity[]    @relation("ActivityAuthor")
+  reviewedActivities   Activity[]    @relation("ActivityReviewer")
+  createdStudents      Student[]     @relation("StudentCreatedBy")
+  recordedConsents     MediaConsent[] @relation("ConsentRecordedBy")
+  revokedConsents      MediaConsent[] @relation("ConsentRevokedBy")
+  createdAchievements  Achievement[] @relation("AchievementCreatedBy")
+  verifiedAchievements Achievement[] @relation("AchievementVerifiedBy")
+  appreciations        Appreciation[]
+  refreshTokens        RefreshToken[]
+  auditEvents          AuditEvent[]
+  uploads              MediaAsset[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([schoolId])
+  @@index([blockId])
+  @@index([districtId])
+  @@index([status, role])
+  @@map("users")
+}
+
+/// One-time codes for phone login and registration.
+///
+/// The code itself is never stored; only a salted hash. Rows are kept after use
+/// so that resend throttling and abuse investigation have something to read.
+model OtpChallenge {
+  id          String     @id @default(cuid())
+  phone       String
+  codeHash    String
+  purpose     OtpPurpose
+  attempts    Int        @default(0)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  requestIp   String?
+  createdAt   DateTime   @default(now())
+
+  @@index([phone, purpose, createdAt])
+  @@index([expiresAt])
+  @@map("otp_challenges")
+}
+
+/// Refresh tokens, stored hashed, grouped into a "family" per device.
+///
+/// Reuse of an already-rotated token is treated as theft: the whole family is
+/// revoked, which logs that device out rather than letting an attacker ride
+/// along silently.
+model RefreshToken {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash    String    @unique
+  familyId     String
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  replacedById String?   @unique
+  userAgent    String?
+  ip           String?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Children
+// ---------------------------------------------------------------------------
+
+model Student {
+  id         String     @id @default(cuid())
+  schoolId   String
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  fullName   String
+  classLevel ClassLevel
+  section    String?
+  rollNumber String?
+  gender     Gender
+  /// Year only. Enough to sanity-check the class, not enough to identify a child.
+  birthYear  Int?
+  guardianName  String
+  guardianPhone String?
+  isActive   Boolean    @default(true)
+
+  createdById String?
+  createdBy   User?   @relation("StudentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  consents     MediaConsent[]
+  achievements Achievement[]
+  activities   ActivityStudent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([schoolId, classLevel, section, rollNumber], name: "student_roll_in_class")
+  @@index([schoolId, classLevel])
+  @@index([schoolId, isActive])
+  @@map("students")
+}
+
+/// A guardian's decision about their child's photograph being published.
+///
+/// Append-only: a new decision supersedes the previous one and the history stays
+/// readable, because "who said the parents agreed, and when" is exactly the
+/// question an inquiry would ask.
+model MediaConsent {
+  id              String        @id @default(cuid())
+  studentId       String
+  student         Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status          ConsentStatus
+  method          ConsentMethod
+  guardianName    String
+  guardianRelation String?
+  /// Storage key of the scanned consent slip, if the school captured one.
+  documentKey     String?
+  note            String?
+
+  recordedById String
+  recordedBy   User   @relation("ConsentRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+  recordedAt   DateTime @default(now())
+
+  revokedById String?
+  revokedBy   User?     @relation("ConsentRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
+  revokedAt   DateTime?
+  revokeReason String?
+
+  /// True for exactly one row per student: the decision currently in force.
+  /// Enforced by a partial unique index in the migration.
+  isCurrent Boolean @default(true)
+
+  @@index([studentId, recordedAt])
+  @@map("media_consents")
+}
+
+// ---------------------------------------------------------------------------
+// The work of the school
+// ---------------------------------------------------------------------------
+
+model Activity {
+  id          String           @id @default(cuid())
+  schoolId    String
+  school      School           @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  blockId     String
+  block       Block            @relation(fields: [blockId], references: [id], onDelete: Restrict)
+  districtId  String
+  district    District         @relation(fields: [districtId], references: [id], onDelete: Restrict)
+
+  authorId String
+  author   User   @relation("ActivityAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  title            String
+  description      String
+  learningOutcome  String?
+  category         ActivityCategory
+  occurredOn       DateTime         @db.Date
+  classLevels      ClassLevel[]
+  participantCount Int?
+  tags             String[]
+
+  status              ActivityStatus   @default(DRAFT)
+  visibility          VisibilityLevel  @default(SCHOOL)
+  requestedVisibility VisibilityLevel?
+  submittedAt         DateTime?
+  publishedAt         DateTime?
+
+  reviewedById    String?
+  reviewedBy      User?     @relation("ActivityReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt      DateTime?
+  rejectionReason String?
+
+  media             ActivityMedia[]
+  recognisedStudents ActivityStudent[]
+  appreciations     Appreciation[]
+
+  appreciationCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([schoolId, status, occurredOn])
+  @@index([blockId, status, occurredOn])
+  @@index([districtId, status, occurredOn])
+  @@index([authorId, status])
+  @@index([status, visibility, publishedAt])
+  @@index([category])
+  @@map("activities")
+}
+
+/// Uploaded bytes, tracked independently of what they are attached to.
+///
+/// An asset exists from the moment an upload ticket is issued, which means an
+/// orphaned upload is visible and sweepable rather than invisible and permanent.
+model MediaAsset {
+  id          String    @id @default(cuid())
+  storageKey  String    @unique
+  kind        MediaKind
+  contentType String
+  sizeBytes   Int
+  width       Int?
+  height      Int?
+  checksum    String?
+
+  uploadedById String
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  /// Scope of the upload, used to keep one school's files out of another's reach.
+  schoolId     String?
+
+  /// Set once the asset is referenced by a record. Unattached assets older than
+  /// the sweep window are deleted.
+  attachedAt DateTime?
+
+  activityMedia ActivityMedia[]
+
+  createdAt DateTime @default(now())
+
+  @@index([uploadedById])
+  @@index([attachedAt])
+  @@map("media_assets")
+}
+
+model ActivityMedia {
+  id         String     @id @default(cuid())
+  activityId String
+  activity   Activity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  assetId    String
+  asset      MediaAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  caption    String?
+  order      Int        @default(0)
+
+  /// Set by a moderator to confirm that every recognisable child in this frame
+  /// is covered by a consent slip. Required before PUBLIC visibility.
+  consentVerified   Boolean   @default(false)
+  consentVerifiedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([activityId, assetId])
+  @@index([activityId, order])
+  @@map("activity_media")
+}
+
+model ActivityStudent {
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([activityId, studentId])
+  @@index([studentId])
+  @@map("activity_students")
+}
+
+/// Recognition from an officer with oversight. The deliberate alternative to a
+/// public "like": attributable, bounded, and impossible to farm.
+model Appreciation {
+  id         String   @id @default(cuid())
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message    String?
+  createdAt  DateTime @default(now())
+
+  @@unique([activityId, userId])
+  @@index([activityId])
+  @@map("appreciations")
+}
+
+model Achievement {
+  id         String   @id @default(cuid())
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  schoolId   String
+  school     School   @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  blockId    String
+  block      Block    @relation(fields: [blockId], references: [id], onDelete: Restrict)
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Restrict)
+
+  category    AchievementCategory
+  level       AchievementLevel
+  title       String
+  description String?
+  awardedOn   DateTime            @db.Date
+  position    Int?
+  organiser   String?
+
+  status VerificationStatus @default(PENDING)
+
+  createdById String
+  createdBy   User   @relation("AchievementCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  verifiedById String?
+  verifiedBy   User?     @relation("AchievementVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+  verifiedAt   DateTime?
+  reviewNote   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([schoolId, status])
+  @@index([blockId, status, awardedOn])
+  @@index([districtId, status, awardedOn])
+  @@map("achievements")
+}
+
+// ---------------------------------------------------------------------------
+// Oversight
+// ---------------------------------------------------------------------------
+
+/// Append-only record of every state change. Written in the same transaction as
+/// the change itself wherever the change spans more than one row.
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorRole  String?
+  action     String
+  entityType String
+  entityId   String
+  /// Scope of the affected entity, so an officer can read the audit trail for
+  /// their own district without scanning the whole table.
+  schoolId   String?
+  blockId    String?
+  districtId String?
+  metadata   Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+  @@index([districtId, createdAt])
+  @@index([createdAt])
+  @@map("audit_events")
+}

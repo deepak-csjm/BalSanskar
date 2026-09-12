@@ -1,0 +1,514 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import type { FastifyInstance } from 'fastify';
+import {
+  auth,
+  createStudent,
+  createTestApp,
+  createUser,
+  prisma,
+  resetDatabase,
+  seedGeography,
+  teardown,
+  validActivityPayload,
+  type Geography,
+  type TestUser,
+} from './helpers.js';
+
+/**
+ * The moderation workflow and the consent gate.
+ *
+ * The single most important behaviour in the platform is asserted here: a
+ * photograph of a child does not reach the open web unless a guardian said yes,
+ * a moderator with district authority said yes, and both are still true at the
+ * moment of publication.
+ */
+describe('activity workflow', () => {
+  let app: FastifyInstance;
+  let geo: Geography;
+  let teacher: TestUser;
+  let principal: TestUser;
+  let districtAdmin: TestUser;
+
+  beforeAll(async () => {
+    app = await createTestApp();
+  });
+
+  afterAll(async () => {
+    await teardown(app);
+  });
+
+  beforeEach(async () => {
+    await resetDatabase();
+    geo = await seedGeography();
+    teacher = await createUser(app, {
+      role: 'TEACHER',
+      schoolId: geo.schoolA1,
+      blockId: geo.blockA1,
+      districtId: geo.districtA,
+    });
+    principal = await createUser(app, {
+      role: 'PRINCIPAL',
+      schoolId: geo.schoolA1,
+      blockId: geo.blockA1,
+      districtId: geo.districtA,
+    });
+    districtAdmin = await createUser(app, {
+      role: 'DISTRICT_ADMIN',
+      districtId: geo.districtA,
+    });
+  });
+
+  async function createDraft(overrides: Record<string, unknown> = {}): Promise<string> {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/v1/activities',
+      headers: auth(teacher),
+      payload: { ...validActivityPayload, ...overrides },
+    });
+    expect(response.statusCode).toBe(201);
+    return (response.json() as { id: string }).id;
+  }
+
+  describe('lifecycle', () => {
+    it('creates a draft that is not visible beyond the school', async () => {
+      const id = await createDraft();
+      const activity = await prisma().activity.findUniqueOrThrow({ where: { id } });
+      expect(activity.status).toBe('DRAFT');
+      expect(activity.visibility).toBe('SCHOOL');
+      expect(activity.publishedAt).toBeNull();
+    });
+
+    it('refuses to publish something that was never submitted', async () => {
+      const id = await createDraft();
+      const response = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(principal),
+        payload: { decision: 'PUBLISH', visibility: 'BLOCK' },
+      });
+      expect(response.statusCode).toBe(409);
+    });
+
+    it('runs draft to published through review', async () => {
+      const id = await createDraft();
+
+      const submitted = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/submit`,
+        headers: auth(teacher),
+        payload: { requestedVisibility: 'BLOCK' },
+      });
+      expect(submitted.statusCode).toBe(200);
+      expect((submitted.json() as { status: string }).status).toBe('PENDING_REVIEW');
+
+      const published = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(principal),
+        payload: { decision: 'PUBLISH', visibility: 'BLOCK' },
+      });
+      expect(published.statusCode).toBe(200);
+      const body = published.json() as { status: string; visibility: string; reviewedByName: string };
+      expect(body.status).toBe('PUBLISHED');
+      expect(body.visibility).toBe('BLOCK');
+      // The reviewer is recorded by name: a publication has to be attributable.
+      expect(body.reviewedByName).toBe('PRINCIPAL user');
+      const stored = await prisma().activity.findUniqueOrThrow({ where: { id } });
+      expect(stored.reviewedById).toBe(principal.id);
+      expect(stored.publishedAt).not.toBeNull();
+    });
+
+    it('does not let the author approve their own work', async () => {
+      const id = await createDraft();
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/submit`,
+        headers: auth(teacher),
+        payload: { requestedVisibility: 'BLOCK' },
+      });
+      // Promote the author so that the only remaining objection is self-review.
+      await prisma().user.update({ where: { id: teacher.id }, data: { role: 'PRINCIPAL' } });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(teacher),
+        payload: { decision: 'PUBLISH', visibility: 'SCHOOL' },
+      });
+      expect(response.statusCode).toBe(403);
+    });
+
+    it('requires a reason when rejecting', async () => {
+      const id = await createDraft();
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/submit`,
+        headers: auth(teacher),
+        payload: { requestedVisibility: 'BLOCK' },
+      });
+
+      const withoutReason = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(principal),
+        payload: { decision: 'REJECT' },
+      });
+      expect(withoutReason.statusCode).toBe(400);
+
+      const withReason = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(principal),
+        payload: { decision: 'REJECT', reason: 'Please add what the children learned.' },
+      });
+      expect(withReason.statusCode).toBe(200);
+      expect((withReason.json() as { rejectionReason: string }).rejectionReason).toContain('learned');
+    });
+
+    it('lets a rejected activity be corrected and resubmitted', async () => {
+      const id = await createDraft();
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/submit`,
+        headers: auth(teacher),
+        payload: { requestedVisibility: 'BLOCK' },
+      });
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(principal),
+        payload: { decision: 'REJECT', reason: 'Needs a photograph.' },
+      });
+
+      const resubmitted = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/submit`,
+        headers: auth(teacher),
+        payload: { requestedVisibility: 'BLOCK' },
+      });
+      expect(resubmitted.statusCode).toBe(200);
+      expect((resubmitted.json() as { rejectionReason: string | null }).rejectionReason).toBeNull();
+    });
+
+    it('does not let a teacher edit an activity once it is published', async () => {
+      const id = await createDraft();
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/submit`,
+        headers: auth(teacher),
+        payload: { requestedVisibility: 'SCHOOL' },
+      });
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(principal),
+        payload: { decision: 'PUBLISH', visibility: 'SCHOOL' },
+      });
+
+      const edit = await app.inject({
+        method: 'PATCH',
+        url: `/v1/activities/${id}`,
+        headers: auth(teacher),
+        payload: { title: 'Quietly rewritten after the fact' },
+      });
+      expect(edit.statusCode).toBe(403);
+    });
+  });
+
+  describe('visibility ceilings', () => {
+    it('does not let a head teacher publish to the open web', async () => {
+      const id = await createDraft();
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/submit`,
+        headers: auth(teacher),
+        payload: { requestedVisibility: 'PUBLIC' },
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(principal),
+        payload: { decision: 'PUBLISH', visibility: 'PUBLIC' },
+      });
+      expect(response.statusCode).toBe(409);
+      expect((response.json() as { error: { message: string } }).error.message).toContain(
+        'cannot approve content at that visibility',
+      );
+    });
+
+    it('does not let a moderator go wider than the teacher asked for', async () => {
+      const id = await createDraft();
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/submit`,
+        headers: auth(teacher),
+        payload: { requestedVisibility: 'SCHOOL' },
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(districtAdmin),
+        payload: { decision: 'PUBLISH', visibility: 'DISTRICT' },
+      });
+      expect(response.statusCode).toBe(409);
+    });
+  });
+
+  describe('consent gate', () => {
+    it('blocks a public publish when a named child has no consent on file', async () => {
+      const studentId = await createStudent(geo.schoolA1, { fullName: 'अंजलि कुमारी' });
+      const id = await createDraft({ studentIds: [studentId] });
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/submit`,
+        headers: auth(teacher),
+        payload: { requestedVisibility: 'PUBLIC' },
+      });
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(districtAdmin),
+        payload: { decision: 'PUBLISH', visibility: 'PUBLIC' },
+      });
+      expect(response.statusCode).toBe(409);
+      expect((response.json() as { error: { message: string } }).error.message).toContain(
+        'guardian consent is missing',
+      );
+    });
+
+    it('allows the same publish once consent is recorded', async () => {
+      const studentId = await createStudent(geo.schoolA1);
+      const id = await createDraft({ studentIds: [studentId] });
+
+      const consent = await app.inject({
+        method: 'POST',
+        url: `/v1/students/${studentId}/consent`,
+        headers: auth(teacher),
+        payload: {
+          status: 'GRANTED',
+          method: 'PAPER_FORM',
+          guardianName: 'राम कुमार',
+          guardianRelation: 'Father',
+        },
+      });
+      expect(consent.statusCode).toBe(201);
+
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/submit`,
+        headers: auth(teacher),
+        payload: { requestedVisibility: 'PUBLIC' },
+      });
+      const response = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(districtAdmin),
+        payload: { decision: 'PUBLISH', visibility: 'PUBLIC' },
+      });
+      expect(response.statusCode).toBe(200);
+      expect((response.json() as { visibility: string }).visibility).toBe('PUBLIC');
+    });
+
+    it('does not block a publish that stays inside the platform', async () => {
+      const studentId = await createStudent(geo.schoolA1);
+      const id = await createDraft({ studentIds: [studentId] });
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/submit`,
+        headers: auth(teacher),
+        payload: { requestedVisibility: 'DISTRICT' },
+      });
+      const response = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(districtAdmin),
+        payload: { decision: 'PUBLISH', visibility: 'DISTRICT' },
+      });
+      expect(response.statusCode).toBe(200);
+    });
+
+    it('pulls published work off the open web the moment consent is withdrawn', async () => {
+      const studentId = await createStudent(geo.schoolA1);
+      await app.inject({
+        method: 'POST',
+        url: `/v1/students/${studentId}/consent`,
+        headers: auth(teacher),
+        payload: { status: 'GRANTED', method: 'PAPER_FORM', guardianName: 'राम कुमार' },
+      });
+      const id = await createDraft({ studentIds: [studentId] });
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/submit`,
+        headers: auth(teacher),
+        payload: { requestedVisibility: 'PUBLIC' },
+      });
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(districtAdmin),
+        payload: { decision: 'PUBLISH', visibility: 'PUBLIC' },
+      });
+
+      const beforeRevoke = await app.inject({ method: 'GET', url: `/v1/public/activities/${id}` });
+      expect(beforeRevoke.statusCode).toBe(200);
+
+      const revoked = await app.inject({
+        method: 'POST',
+        url: `/v1/students/${studentId}/consent/revoke`,
+        headers: auth(teacher),
+        payload: { reason: 'The family asked us to take the photograph down.' },
+      });
+      expect(revoked.statusCode).toBe(200);
+      expect((revoked.json() as { unpublishedActivityCount: number }).unpublishedActivityCount).toBe(1);
+
+      const afterRevoke = await app.inject({ method: 'GET', url: `/v1/public/activities/${id}` });
+      expect(afterRevoke.statusCode).toBe(404);
+
+      // The record itself survives — it is evidence — but only inside the platform.
+      const stored = await prisma().activity.findUniqueOrThrow({ where: { id } });
+      expect(stored.status).toBe('PUBLISHED');
+      expect(stored.visibility).toBe('DISTRICT');
+    });
+
+    it('keeps the whole consent history, superseding rather than overwriting', async () => {
+      const studentId = await createStudent(geo.schoolA1);
+      await app.inject({
+        method: 'POST',
+        url: `/v1/students/${studentId}/consent`,
+        headers: auth(teacher),
+        payload: { status: 'DENIED', method: 'VERBAL_IN_PERSON', guardianName: 'राम कुमार' },
+      });
+      await app.inject({
+        method: 'POST',
+        url: `/v1/students/${studentId}/consent`,
+        headers: auth(teacher),
+        payload: { status: 'GRANTED', method: 'PAPER_FORM', guardianName: 'राम कुमार' },
+      });
+
+      const history = await app.inject({
+        method: 'GET',
+        url: `/v1/students/${studentId}/consent`,
+        headers: auth(teacher),
+      });
+      const items = (history.json() as { items: Array<{ status: string }> }).items;
+      expect(items).toHaveLength(2);
+      expect(items[0]?.status).toBe('GRANTED');
+
+      const current = await prisma().mediaConsent.count({ where: { studentId, isCurrent: true } });
+      expect(current).toBe(1);
+    });
+
+    it('will not let the database hold two current decisions for one child', async () => {
+      const studentId = await createStudent(geo.schoolA1, { consent: 'GRANTED' });
+      // Bypass the service and write straight to the table, as a buggy import
+      // or a hand-run UPDATE would.
+      await expect(
+        prisma().mediaConsent.create({
+          data: {
+            studentId,
+            status: 'GRANTED',
+            method: 'PAPER_FORM',
+            guardianName: 'Someone else',
+            recordedById: teacher.id,
+            isCurrent: true,
+          },
+        }),
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('recognised students', () => {
+    it('rejects a student from another school', async () => {
+      const otherSchoolStudent = await createStudent(geo.schoolA2);
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/activities',
+        headers: auth(teacher),
+        payload: { ...validActivityPayload, studentIds: [otherSchoolStudent] },
+      });
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
+  describe('appreciation', () => {
+    it('cannot be given twice by the same officer', async () => {
+      const id = await createDraft();
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/submit`,
+        headers: auth(teacher),
+        payload: { requestedVisibility: 'DISTRICT' },
+      });
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(principal),
+        payload: { decision: 'PUBLISH', visibility: 'DISTRICT' },
+      });
+
+      const first = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/appreciate`,
+        headers: auth(districtAdmin),
+        payload: { message: 'Excellent work by the whole school.' },
+      });
+      expect(first.statusCode).toBe(200);
+      expect((first.json() as { appreciationCount: number }).appreciationCount).toBe(1);
+
+      const second = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/appreciate`,
+        headers: auth(districtAdmin),
+        payload: {},
+      });
+      expect(second.statusCode).toBe(409);
+    });
+
+    it('cannot be given by a teacher', async () => {
+      const id = await createDraft();
+      const response = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/appreciate`,
+        headers: auth(teacher),
+        payload: {},
+      });
+      expect(response.statusCode).toBe(403);
+    });
+  });
+
+  describe('validation', () => {
+    it('refuses an activity dated in the future', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/activities',
+        headers: auth(teacher),
+        payload: {
+          ...validActivityPayload,
+          occurredOn: new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10),
+        },
+      });
+      expect(response.statusCode).toBe(400);
+      expect((response.json() as { error: { fields: Record<string, string[]> } }).error.fields)
+        .toHaveProperty('occurredOn');
+    });
+
+    it('strips control characters and bidirectional overrides from free text', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/v1/activities',
+        headers: auth(teacher),
+        payload: {
+          ...validActivityPayload,
+          title: `Science fair‮ reversed  text here`,
+        },
+      });
+      expect(response.statusCode).toBe(201);
+      const stored = (response.json() as { title: string }).title;
+      expect(stored).not.toContain('‮');
+      expect(stored).not.toContain(' ');
+    });
+  });
+});

@@ -1,0 +1,40 @@
+{
+  "name": "balsanskar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BalSanskar \u2014 a dedicated platform for Uttar Pradesh Basic Shiksha Parishad schools to record, verify and showcase the work of teachers and the achievements of their students.",
+  "license": "AGPL-3.0-or-later",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "build": "pnpm -r --filter @balsanskar/shared build && pnpm -r --filter @balsanskar/api build && pnpm -r --filter @balsanskar/web build",
+    "dev": "pnpm -r --parallel dev",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm -r test",
+    "db:migrate": "pnpm --filter @balsanskar/api db:migrate",
+    "db:seed": "pnpm --filter @balsanskar/api db:seed",
+    "ci": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "eslint": "^9.15.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.15.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "esbuild"
+    ]
+  }
+}
