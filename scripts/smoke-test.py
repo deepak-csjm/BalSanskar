@@ -25,6 +25,11 @@ It writes to the database it points at. Never run it against production.
 import json, os, urllib.request, urllib.error
 
 BASE = os.environ.get("BALSANSKAR_URL", "http://127.0.0.1:4100").rstrip("/") + "/v1"
+# Whatever SEED_SUPER_ADMIN_PHONE / _PASSWORD were set to when the database was
+# seeded. Hardcoding them here once meant this script only ran for whoever
+# happened to have typed the same password.
+ADMIN_PHONE = os.environ.get("SEED_SUPER_ADMIN_PHONE", "9999900001")
+ADMIN_PASSWORD = os.environ.get("SEED_SUPER_ADMIN_PASSWORD", "ChangeThisPassword1")
 
 
 def call(method, path, body=None, token=None, expect=None):
@@ -54,7 +59,12 @@ def ok(label):
     steps.append(f"  ok  {label}")
 
 
-_, s = call("POST", "/auth/password/login", {"identifier": "9999900001", "password": "BootstrapPass123"}, expect=200)
+_, s = call(
+    "POST",
+    "/auth/password/login",
+    {"identifier": ADMIN_PHONE, "password": ADMIN_PASSWORD},
+    expect=200,
+)
 admin = s["tokens"]["accessToken"]
 ok("super admin signs in with a plain 10-digit number")
 

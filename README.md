@@ -30,14 +30,16 @@ a named officer with oversight, and it is recorded as such.
 
 ## What is built
 
-| Area                                                                                                                                         | State                                                  |
-| -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| Domain contracts, RBAC and child-safety policy (`packages/shared`)                                                                           | Complete, 38 unit tests                                |
-| Data model with database-level constraints (`apps/api/prisma`)                                                                               | Complete, 2 migrations                                 |
-| API: auth, schools, people, students, consent, activities, moderation, achievements, reporting, public showcase, uploads, audit (`apps/api`) | Complete, 79 integration tests against real PostgreSQL |
-| Web PWA: Hindi-first, offline capture, moderation console, dashboards, showcase (`apps/web`)                                                 | Complete, 15 tests                                     |
-| Containers, compose stack, CI, seed data for all 75 districts                                                                                | Complete                                               |
-| End-to-end smoke test of the full teacher-to-showcase journey                                                                                | Complete, passing                                      |
+| Area                                                                                                                                         | State                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Domain contracts, RBAC and child-safety policy (`packages/shared`)                                                                           | Complete, 71 unit tests                                 |
+| Data model with database-level constraints (`apps/api/prisma`)                                                                               | Complete, 4 migrations                                  |
+| API: auth, schools, people, students, consent, activities, moderation, achievements, reporting, public showcase, uploads, audit (`apps/api`) | Complete, 109 integration tests against real PostgreSQL |
+| School onboarding at scale: claim a UDISE code, block office confirms it                                                                     | Complete — see [`docs/integrity.md`](docs/integrity.md) |
+| The gate out of the school: head teacher attests, block office clears, risk-ranked queue                                                     | Complete — see [`docs/integrity.md`](docs/integrity.md) |
+| Web PWA: Hindi-first, offline capture, moderation console, dashboards, showcase (`apps/web`)                                                 | Complete, 22 tests, 88.6 KB gzipped first load          |
+| Containers, compose stack, CI, seed data for all 75 districts                                                                                | Complete                                                |
+| End-to-end scripts for both journeys, run against a live server                                                                              | Complete, passing                                       |
 
 Deliberately **not** built yet, and why — see [`docs/roadmap.md`](docs/roadmap.md):
 attendance, notifications, a native app, offline media capture beyond the
@@ -85,6 +87,25 @@ pnpm dev        # API on :4000, web on :5173
 Outside production the SMS provider prints the one-time code to the log and
 returns it in the response, so no gateway is needed to sign in.
 
+### Who exists after seeding
+
+| Sign in as                  | Number       | How                              |
+| --------------------------- | ------------ | -------------------------------- |
+| Platform administrator      | `9999900001` | password, whatever you set above |
+| District officer, Shravasti | `9999900010` | one-time code                    |
+| Block officer, Gilaula      | `9999900011` | one-time code                    |
+
+Those three, and deliberately nobody else. An officer cannot arrive through any
+journey in the product — somebody with more authority has to appoint them — so
+without them the claim queue and the clearance queue are unreachable. Everyone
+below that level is left out on purpose: a head teacher arrives by claiming a
+school at `/claim` and a teacher by registering against one at `/register`, and
+those are the two journeys most worth walking yourself.
+
+Two limits will interrupt you before they interrupt a real user, and both are
+working as intended: one code per number per minute, and eight per number per
+hour.
+
 ### Checks
 
 ```bash
@@ -95,10 +116,18 @@ The API suite needs a PostgreSQL at `DATABASE_URL` (defaulting to a
 `balsanskar_test` database). It runs migrations itself, then truncates between
 files.
 
-To walk the whole journey against a running server:
+Two scripts walk the whole product against a running server. Both need the
+demo seed, both write to the database they point at, and neither should ever be
+aimed at a real deployment:
 
 ```bash
+# A teacher's work, from writing it up to the open web and back off again:
+# consent refused, consent given, published, withdrawn, gone.
 BALSANSKAR_URL=http://127.0.0.1:4000 python3 scripts/smoke-test.py
+
+# How a school gets on, and what it takes for its work to leave it:
+# claim, collision, confirm, register, attest, clear, promote, return.
+BALSANSKAR_URL=http://127.0.0.1:4000 python3 scripts/gate-check.py
 ```
 
 ---

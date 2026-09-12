@@ -150,6 +150,66 @@ async function seedDemoData(): Promise<void> {
   console.log(
     `Demo data: ${blocks.length} blocks and ${schools.length} schools in ${district.nameEn}`,
   );
+
+  /**
+   * Two officers, and deliberately nobody below them.
+   *
+   * A district officer and a block officer cannot arrive through any flow in
+   * the product — somebody with more authority has to appoint them — so without
+   * these two the claim queue and the clearance queue are unreachable and the
+   * platform cannot be evaluated at all.
+   *
+   * Everyone below that level is left out on purpose. A head teacher arrives by
+   * claiming a school and a teacher by registering against one; seeding them
+   * would skip the two journeys most worth testing.
+   *
+   * They sign in by one-time code, which outside production is printed to the
+   * log and returned in the response, so these accounts carry no password and
+   * no credential exists to leak.
+   */
+  const gilaula = storedBlocks.find((block) => block.code === 'SRV-03') ?? storedBlocks[0];
+  if (!gilaula) return;
+
+  const officers = [
+    {
+      phone: '+919999900010',
+      fullName: 'जनपद समन्वयक (डेमो)',
+      role: 'DISTRICT_ADMIN' as const,
+      designation: 'जिला बेसिक शिक्षा अधिकारी',
+      districtId: district.id,
+      blockId: null as string | null,
+    },
+    {
+      phone: '+919999900011',
+      fullName: 'खंड शिक्षा अधिकारी (डेमो)',
+      role: 'BLOCK_ADMIN' as const,
+      designation: 'खंड शिक्षा अधिकारी',
+      districtId: district.id,
+      blockId: gilaula.id,
+    },
+  ];
+
+  for (const officer of officers) {
+    await prisma.user.upsert({
+      where: { phone: officer.phone },
+      update: {},
+      create: {
+        phone: officer.phone,
+        fullName: officer.fullName,
+        role: officer.role,
+        designation: officer.designation,
+        status: 'ACTIVE',
+        districtId: officer.districtId,
+        blockId: officer.blockId,
+        approvedAt: new Date(),
+      },
+    });
+  }
+
+  console.log(
+    `Demo data: a district officer (9999900010) and a block officer for ` +
+      `${gilaula.nameEn} (9999900011), both signing in by one-time code`,
+  );
 }
 
 async function main(): Promise<void> {
