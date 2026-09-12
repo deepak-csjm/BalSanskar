@@ -6,6 +6,7 @@ import {
   MEDIA_KINDS,
   VISIBILITY_LEVELS,
 } from '../enums.js';
+import { CLEARANCE_STATES } from '../integrity.js';
 import {
   cleanMultilineText,
   cleanText,
@@ -56,6 +57,19 @@ export const moderateActivitySchema = z.object({
   visibility: z.enum(VISIBILITY_LEVELS).optional(),
   /** Required on rejection: a teacher who is told "no" without a reason stops using the platform. */
   reason: cleanText(3, 500).optional(),
+  /**
+   * Required whenever the activity is being sent beyond its own school.
+   *
+   * The client shows the full statement from `ATTESTATION_TEXT` and the head
+   * teacher agrees to it explicitly. Publishing at SCHOOL visibility needs
+   * none of this — that is the school's own internal record.
+   */
+  attestation: z
+    .object({
+      confirmed: z.literal(true),
+      note: cleanText(1, 500).optional(),
+    })
+    .optional(),
 });
 export type ModerateActivityInput = z.infer<typeof moderateActivitySchema>;
 
@@ -116,6 +130,17 @@ export const activityDetailSchema = activitySummarySchema.extend({
   rejectionReason: z.string().nullable(),
   /** Populated for moderators: everything blocking a publish decision. */
   publishBlockers: z.array(z.string()).optional(),
+  /** How far this activity has got through the gate out of the school. */
+  clearance: z.enum(CLEARANCE_STATES),
+  clearanceTarget: z.enum(VISIBILITY_LEVELS).nullable(),
+  attestedByName: z.string().nullable(),
+  attestedAt: z.string().nullable(),
+  attestationNote: z.string().nullable(),
+  clearedByName: z.string().nullable(),
+  clearedAt: z.string().nullable(),
+  clearanceNote: z.string().nullable(),
+  riskScore: z.number().int(),
+  riskFlags: z.array(z.string()),
 });
 export type ActivityDetail = z.infer<typeof activityDetailSchema>;
 
@@ -204,7 +229,19 @@ export const requestUploadSchema = z.object({
   fileName: cleanText(1, 200),
   contentType: z.enum([...ALLOWED_IMAGE_TYPES, ...ALLOWED_DOCUMENT_TYPES]),
   sizeBytes: z.number().int().positive().max(MAX_UPLOAD_BYTES),
-  purpose: z.enum(['ACTIVITY_MEDIA', 'CONSENT_DOCUMENT']).default('ACTIVITY_MEDIA'),
+  purpose: z
+    .enum(['ACTIVITY_MEDIA', 'CONSENT_DOCUMENT', 'SCHOOL_EVIDENCE'])
+    .default('ACTIVITY_MEDIA'),
+  /**
+   * Visual fingerprint of the image, computed in the browser before upload, so
+   * the platform can spot a recycled photograph without ever handling the bytes.
+   * Optional: an old WebView may not manage it, and its absence is not an error.
+   */
+  perceptualHash: z
+    .string()
+    .trim()
+    .regex(/^[0-9a-f]{16}$/)
+    .optional(),
 });
 export type RequestUploadInput = z.infer<typeof requestUploadSchema>;
 

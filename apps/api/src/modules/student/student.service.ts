@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import {
+  canHoldRecords,
   ERROR_CODES,
   type ConsentRecord,
   type CreateStudentInput,
@@ -124,10 +125,17 @@ export async function createStudent(
 ): Promise<Student> {
   const school = await prisma.school.findUnique({
     where: { id: schoolId },
-    select: { id: true, blockId: true, districtId: true, isActive: true },
+    select: { id: true, blockId: true, districtId: true, isActive: true, status: true },
   });
   if (!school) throw notFound('School not found');
   if (!school.isActive) throw conflict('That school is marked inactive');
+  // A school the block office has not confirmed holds nothing at all. There is
+  // no point claiming a school and waiting, which is the point.
+  if (!canHoldRecords(school.status)) {
+    throw conflict(
+      'This school is still waiting for the block office to confirm it. Children can be added once it has.',
+    );
+  }
   resolveScopeFilter(actor, {
     schoolId: school.id,
     blockId: school.blockId,

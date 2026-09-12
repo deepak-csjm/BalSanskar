@@ -43,7 +43,12 @@ export async function createUploadTicket(
   const isDocument = (ALLOWED_DOCUMENT_TYPES as readonly string[]).includes(input.contentType);
   const key = buildStorageKey({
     scope: actor.schoolId ?? actor.blockId ?? actor.districtId ?? 'state',
-    purpose: input.purpose === 'CONSENT_DOCUMENT' ? 'consent' : 'activity',
+    purpose:
+      input.purpose === 'CONSENT_DOCUMENT'
+        ? 'consent'
+        : input.purpose === 'SCHOOL_EVIDENCE'
+          ? 'evidence'
+          : 'activity',
     contentType: input.contentType,
   });
 
@@ -62,6 +67,10 @@ export async function createUploadTicket(
         sizeBytes: input.sizeBytes,
         uploadedById: actor.id,
         schoolId: actor.schoolId,
+        // Computed in the browser, so the platform can spot a recycled
+        // photograph without ever handling the bytes. A client that forges it
+        // only ever earns itself a flag it would otherwise have avoided.
+        perceptualHash: input.perceptualHash ?? null,
       },
     });
     await recordAudit(tx, audit, {

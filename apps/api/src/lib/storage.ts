@@ -59,7 +59,7 @@ export interface StorageDriver {
  */
 export function buildStorageKey(input: {
   scope: string;
-  purpose: 'activity' | 'consent';
+  purpose: 'activity' | 'consent' | 'evidence';
   contentType: string;
 }): string {
   const now = new Date();

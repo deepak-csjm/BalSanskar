@@ -9,6 +9,7 @@ import {
   resetDatabase,
   seedGeography,
   teardown,
+  publishThroughGate,
   validActivityPayload,
   type Geography,
   type TestUser,
@@ -28,6 +29,7 @@ describe('activity workflow', () => {
   let teacher: TestUser;
   let principal: TestUser;
   let districtAdmin: TestUser;
+  let blockOfficer: TestUser;
 
   beforeAll(async () => {
     app = await createTestApp();
@@ -49,6 +51,11 @@ describe('activity workflow', () => {
     principal = await createUser(app, {
       role: 'PRINCIPAL',
       schoolId: geo.schoolA1,
+      blockId: geo.blockA1,
+      districtId: geo.districtA,
+    });
+    blockOfficer = await createUser(app, {
+      role: 'BLOCK_ADMIN',
       blockId: geo.blockA1,
       districtId: geo.districtA,
     });
@@ -105,16 +112,32 @@ describe('activity workflow', () => {
         method: 'POST',
         url: `/v1/activities/${id}/moderate`,
         headers: auth(principal),
-        payload: { decision: 'PUBLISH', visibility: 'BLOCK' },
+        payload: {
+          decision: 'PUBLISH',
+          visibility: 'BLOCK',
+          attestation: { confirmed: true },
+        },
       });
       expect(published.statusCode).toBe(200);
       const body = published.json() as {
         status: string;
         visibility: string;
+        clearance: string;
         reviewedByName: string;
       };
       expect(body.status).toBe('PUBLISHED');
-      expect(body.visibility).toBe('BLOCK');
+      // Attested but not yet cleared, so it is live only inside the school.
+      expect(body.clearance).toBe('AWAITING_BLOCK');
+      expect(body.visibility).toBe('SCHOOL');
+
+      const cleared = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/clearance`,
+        headers: auth(blockOfficer),
+        payload: { decision: 'CLEAR' },
+      });
+      expect(cleared.statusCode).toBe(200);
+      expect((cleared.json() as { visibility: string }).visibility).toBe('BLOCK');
       // The reviewer is recorded by name: a publication has to be attributable.
       expect(body.reviewedByName).toBe('PRINCIPAL user');
       const stored = await prisma().activity.findUniqueOrThrow({ where: { id } });
@@ -235,7 +258,11 @@ describe('activity workflow', () => {
         method: 'POST',
         url: `/v1/activities/${id}/moderate`,
         headers: auth(principal),
-        payload: { decision: 'PUBLISH', visibility: 'PUBLIC' },
+        payload: {
+          decision: 'PUBLISH',
+          visibility: 'PUBLIC',
+          attestation: { confirmed: true },
+        },
       });
       expect(response.statusCode).toBe(409);
       expect((response.json() as { error: { message: string } }).error.message).toContain(
@@ -256,7 +283,11 @@ describe('activity workflow', () => {
         method: 'POST',
         url: `/v1/activities/${id}/moderate`,
         headers: auth(districtAdmin),
-        payload: { decision: 'PUBLISH', visibility: 'DISTRICT' },
+        payload: {
+          decision: 'PUBLISH',
+          visibility: 'DISTRICT',
+          attestation: { confirmed: true },
+        },
       });
       expect(response.statusCode).toBe(409);
     });
@@ -277,12 +308,17 @@ describe('activity workflow', () => {
         method: 'POST',
         url: `/v1/activities/${id}/moderate`,
         headers: auth(districtAdmin),
-        payload: { decision: 'PUBLISH', visibility: 'PUBLIC' },
+        payload: {
+          decision: 'PUBLISH',
+          visibility: 'PUBLIC',
+          attestation: { confirmed: true },
+        },
       });
       expect(response.statusCode).toBe(409);
-      expect((response.json() as { error: { message: string } }).error.message).toContain(
-        'guardian consent is missing',
-      );
+      const message = (response.json() as { error: { message: string } }).error.message;
+      // Both gates report at once rather than one at a time.
+      expect(message).toContain('guardian consent is missing');
+      expect(message).toContain('block officer');
     });
 
     it('allows the same publish once consent is recorded', async () => {
@@ -302,38 +338,42 @@ describe('activity workflow', () => {
       });
       expect(consent.statusCode).toBe(201);
 
-      await app.inject({
-        method: 'POST',
-        url: `/v1/activities/${id}/submit`,
-        headers: auth(teacher),
-        payload: { requestedVisibility: 'PUBLIC' },
+      await publishThroughGate(app, {
+        activityId: id,
+        author: teacher,
+        head: principal,
+        blockOfficer,
+        districtOfficer: districtAdmin,
+        visibility: 'PUBLIC',
       });
-      const response = await app.inject({
-        method: 'POST',
-        url: `/v1/activities/${id}/moderate`,
+
+      const detail = await app.inject({
+        method: 'GET',
+        url: `/v1/activities/${id}`,
         headers: auth(districtAdmin),
-        payload: { decision: 'PUBLISH', visibility: 'PUBLIC' },
       });
-      expect(response.statusCode).toBe(200);
-      expect((response.json() as { visibility: string }).visibility).toBe('PUBLIC');
+      expect((detail.json() as { visibility: string }).visibility).toBe('PUBLIC');
     });
 
     it('does not block a publish that stays inside the platform', async () => {
       const studentId = await createStudent(geo.schoolA1);
       const id = await createDraft({ studentIds: [studentId] });
-      await app.inject({
-        method: 'POST',
-        url: `/v1/activities/${id}/submit`,
-        headers: auth(teacher),
-        payload: { requestedVisibility: 'DISTRICT' },
+      await publishThroughGate(app, {
+        activityId: id,
+        author: teacher,
+        head: principal,
+        blockOfficer,
+        visibility: 'DISTRICT',
       });
-      const response = await app.inject({
-        method: 'POST',
-        url: `/v1/activities/${id}/moderate`,
+
+      const detail = await app.inject({
+        method: 'GET',
+        url: `/v1/activities/${id}`,
         headers: auth(districtAdmin),
-        payload: { decision: 'PUBLISH', visibility: 'DISTRICT' },
       });
-      expect(response.statusCode).toBe(200);
+      // No consent on file, and it still reaches district level: the consent
+      // gate guards the open web, not the department's own systems.
+      expect((detail.json() as { visibility: string }).visibility).toBe('DISTRICT');
     });
 
     it('pulls published work off the open web the moment consent is withdrawn', async () => {
@@ -345,17 +385,13 @@ describe('activity workflow', () => {
         payload: { status: 'GRANTED', method: 'PAPER_FORM', guardianName: 'राम कुमार' },
       });
       const id = await createDraft({ studentIds: [studentId] });
-      await app.inject({
-        method: 'POST',
-        url: `/v1/activities/${id}/submit`,
-        headers: auth(teacher),
-        payload: { requestedVisibility: 'PUBLIC' },
-      });
-      await app.inject({
-        method: 'POST',
-        url: `/v1/activities/${id}/moderate`,
-        headers: auth(districtAdmin),
-        payload: { decision: 'PUBLISH', visibility: 'PUBLIC' },
+      await publishThroughGate(app, {
+        activityId: id,
+        author: teacher,
+        head: principal,
+        blockOfficer,
+        districtOfficer: districtAdmin,
+        visibility: 'PUBLIC',
       });
 
       const beforeRevoke = await app.inject({ method: 'GET', url: `/v1/public/activities/${id}` });
@@ -444,17 +480,12 @@ describe('activity workflow', () => {
   describe('appreciation', () => {
     it('cannot be given twice by the same officer', async () => {
       const id = await createDraft();
-      await app.inject({
-        method: 'POST',
-        url: `/v1/activities/${id}/submit`,
-        headers: auth(teacher),
-        payload: { requestedVisibility: 'DISTRICT' },
-      });
-      await app.inject({
-        method: 'POST',
-        url: `/v1/activities/${id}/moderate`,
-        headers: auth(principal),
-        payload: { decision: 'PUBLISH', visibility: 'DISTRICT' },
+      await publishThroughGate(app, {
+        activityId: id,
+        author: teacher,
+        head: principal,
+        blockOfficer,
+        visibility: 'DISTRICT',
       });
 
       const first = await app.inject({
@@ -505,19 +536,25 @@ describe('activity workflow', () => {
     });
 
     it('strips control characters and bidirectional overrides from free text', async () => {
+      // Built from char codes rather than written out: a formatter will
+      // rewrite a unicode escape in a source file into the actual character,
+      // and a NUL byte makes the whole file binary to every tool that reads it.
+      const RLO = String.fromCharCode(0x202e);
+      const NUL = String.fromCharCode(0x00);
+      const hostileTitle = `Science fair${RLO} reversed${NUL} text here`;
       const response = await app.inject({
         method: 'POST',
         url: '/v1/activities',
         headers: auth(teacher),
         payload: {
           ...validActivityPayload,
-          title: `Science fair‮ reversed  text here`,
+          title: hostileTitle,
         },
       });
       expect(response.statusCode).toBe(201);
       const stored = (response.json() as { title: string }).title;
-      expect(stored).not.toContain('‮');
-      expect(stored).not.toContain(' ');
+      expect(stored).not.toContain(RLO);
+      expect(stored).not.toContain(NUL);
     });
   });
 });

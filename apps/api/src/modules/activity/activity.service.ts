@@ -1,9 +1,11 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import {
   canEditActivity,
+  canHoldRecords,
   canTransitionActivity,
   evaluatePublishBlockers,
   maxApprovableVisibility,
+  needsClearance,
   VISIBILITY_RANK,
   type ActivityDetail,
   type ActivitySummary,
@@ -24,6 +26,7 @@ import { getStorage } from '../../lib/storage.js';
 import { isPrismaError, PG_ERROR } from '../../lib/prisma.js';
 import type { Actor } from '../../plugins/auth.js';
 import { findStudentsWithoutConsent } from '../student/student.service.js';
+import { prepareEscalation } from './clearance.service.js';
 
 /**
  * Activities: the record of what a school actually did.
@@ -34,11 +37,13 @@ import { findStudentsWithoutConsent } from '../student/student.service.js';
  */
 
 const activityInclude = {
-  school: { select: { id: true, nameHi: true } },
+  school: { select: { id: true, nameHi: true, trustTier: true } },
   block: { select: { nameHi: true } },
   district: { select: { nameHi: true } },
   author: { select: { id: true, fullName: true } },
   reviewedBy: { select: { fullName: true } },
+  attestedBy: { select: { fullName: true } },
+  clearedBy: { select: { fullName: true } },
   media: {
     orderBy: { order: 'asc' },
     include: { asset: true },
@@ -121,6 +126,16 @@ async function toDetail(row: ActivityRow, actor: Actor): Promise<ActivityDetail>
     reviewedByName: row.reviewedBy?.fullName ?? null,
     reviewedAt: row.reviewedAt?.toISOString() ?? null,
     rejectionReason: row.rejectionReason,
+    clearance: row.clearance,
+    clearanceTarget: row.clearanceTarget,
+    attestedByName: row.attestedBy?.fullName ?? null,
+    attestedAt: row.attestedAt?.toISOString() ?? null,
+    attestationNote: row.attestationNote,
+    clearedByName: row.clearedBy?.fullName ?? null,
+    clearedAt: row.clearedAt?.toISOString() ?? null,
+    clearanceNote: row.clearanceNote,
+    riskScore: row.riskScore,
+    riskFlags: row.riskFlags,
   };
 
   // Moderators get the checklist; authors get it too, so they can fix problems
@@ -136,7 +151,7 @@ async function toDetail(row: ActivityRow, actor: Actor): Promise<ActivityDetail>
   return detail;
 }
 
-function toPublishCandidate(row: ActivityRow) {
+function toPublishCandidate(row: ActivityRow, attestingNow = false) {
   return {
     status: row.status,
     hasMedia: row.media.length > 0,
@@ -145,6 +160,8 @@ function toPublishCandidate(row: ActivityRow) {
     ),
     mediaWithoutConsentCount: row.media.filter((item) => !item.consentVerified).length,
     descriptionLength: row.description.length,
+    clearance: row.clearance,
+    attestingNow,
   };
 }
 
@@ -265,6 +282,16 @@ export async function createActivity(
 ): Promise<ActivityDetail> {
   if (!actor.schoolId || !actor.blockId || !actor.districtId) {
     throw forbidden('Only staff attached to a school can record an activity');
+  }
+
+  const school = await prisma.school.findUniqueOrThrow({
+    where: { id: actor.schoolId },
+    select: { status: true },
+  });
+  if (!canHoldRecords(school.status)) {
+    throw conflict(
+      'This school is still waiting for the block office to confirm it. Activities can be recorded once it has.',
+    );
   }
 
   const studentIds = await validateStudentIds(prisma, actor.schoolId, input.studentIds);
@@ -464,7 +491,18 @@ export async function moderateActivity(
 ): Promise<ActivityDetail> {
   const existing = await loadActivityInScope(prisma, actor, activityId);
 
-  if (existing.status !== 'PENDING_REVIEW') {
+  // Moderation happens at two moments. The first is the ordinary one: an
+  // activity awaiting review. The second is a promotion — an activity the
+  // block has already cleared into the district's view, which a district
+  // officer is now sending to the open web. Both are `PUBLISH`; only the first
+  // can be a rejection.
+  const promoting =
+    input.decision === 'PUBLISH' &&
+    existing.status === 'PUBLISHED' &&
+    input.visibility !== undefined &&
+    VISIBILITY_RANK[input.visibility] > VISIBILITY_RANK[existing.visibility];
+
+  if (existing.status !== 'PENDING_REVIEW' && !promoting) {
     throw invalidState('Only an activity awaiting review can be moderated');
   }
   if (existing.authorId === actor.id) {
@@ -506,22 +544,31 @@ export async function moderateActivity(
 
   const visibility: VisibilityLevel = input.visibility ?? existing.requestedVisibility ?? 'BLOCK';
 
+  const attestingNow = input.attestation?.confirmed === true;
+
   const blockers = evaluatePublishBlockers(
-    toPublishCandidate(existing),
+    toPublishCandidate(existing, attestingNow),
     visibility,
     actor.role,
-    existing.requestedVisibility,
+    // On a promotion the teacher's original request has already been honoured;
+    // what governs now is the officer's own ceiling and the clearance history.
+    promoting ? null : existing.requestedVisibility,
   );
   if (blockers.length > 0) {
     throw conflict(describeBlockers(blockers), 'INVALID_STATE_TRANSITION');
   }
 
-  // Re-read consent inside the transaction. The check above used the row loaded
-  // at the start of the request; a guardian could have withdrawn consent in
-  // between, and this is the one place where losing that race would put a
-  // child's photograph on the open web.
+  // Work that stays inside the school is the school's own record and needs no
+  // gate. Everything wider passes through the one in docs/integrity.md.
+  const escalating = needsClearance(visibility);
+  const alreadyCleared = existing.clearance === 'CLEARED' || existing.clearance === 'AUTO_CLEARED';
+
   const published = await prisma.$transaction(async (tx) => {
     if (visibility === 'PUBLIC') {
+      // Re-read consent inside the transaction. The check above used the row
+      // loaded at the start of the request, and a guardian could have withdrawn
+      // consent in between — the one race where losing puts a child's
+      // photograph on the open web.
       const studentIds = existing.recognisedStudents.map((link) => link.studentId);
       const missing = await findStudentsWithoutConsent(tx, studentIds);
       if (missing.length > 0) {
@@ -532,18 +579,65 @@ export async function moderateActivity(
       }
     }
 
+    // How far this is allowed to travel right now. An activity is never visible
+    // above the level that has actually been cleared, so an escalation still
+    // waiting on a block officer publishes at school level and sits there.
+    let clearance = existing.clearance;
+    let grantedVisibility: VisibilityLevel = visibility;
+    let clearanceTarget = existing.clearanceTarget;
+    let riskScore = existing.riskScore;
+    let riskFlags = existing.riskFlags;
+
+    if (!escalating) {
+      clearance = 'NOT_REQUIRED';
+      clearanceTarget = null;
+    } else if (alreadyCleared) {
+      // A block officer has already looked at this; the district is raising it
+      // further, which their role already permits.
+      clearanceTarget = visibility;
+    } else {
+      const outcome = await prepareEscalation(tx, existing, visibility);
+      clearance = outcome.clearance;
+      clearanceTarget = visibility;
+      riskScore = outcome.assessment.score;
+      riskFlags = outcome.assessment.flags;
+      grantedVisibility = outcome.clearance === 'AUTO_CLEARED' ? visibility : 'SCHOOL';
+
+      if (outcome.tier !== existing.school.trustTier) {
+        await tx.school.update({
+          where: { id: existing.schoolId },
+          data: { trustTier: outcome.tier },
+        });
+      }
+    }
+
     const activity = await tx.activity.update({
       where: { id: activityId },
       data: {
         status: 'PUBLISHED',
-        visibility,
+        visibility: grantedVisibility,
         reviewedById: actor.id,
         reviewedAt: new Date(),
         publishedAt: existing.publishedAt ?? new Date(),
         rejectionReason: null,
+        clearance,
+        clearanceTarget,
+        riskScore,
+        riskFlags,
+        ...(attestingNow && !existing.attestedById
+          ? {
+              attestedById: actor.id,
+              attestedAt: new Date(),
+              attestationNote: input.attestation?.note ?? null,
+            }
+          : {}),
+        ...(clearance === 'AUTO_CLEARED' && !existing.clearanceNote
+          ? { clearanceNote: 'Auto-cleared on the school record.' }
+          : {}),
       },
       include: activityInclude,
     });
+
     await recordAudit(tx, audit, {
       action: 'ACTIVITY_PUBLISHED',
       entityType: 'Activity',
@@ -551,8 +645,27 @@ export async function moderateActivity(
       schoolId: activity.schoolId,
       blockId: activity.blockId,
       districtId: activity.districtId,
-      metadata: { visibility },
+      metadata: {
+        visibility: grantedVisibility,
+        requested: visibility,
+        clearance,
+        riskScore,
+        riskFlags,
+      },
     });
+
+    if (attestingNow && !existing.attestedById) {
+      await recordAudit(tx, audit, {
+        action: 'ACTIVITY_ATTESTED',
+        entityType: 'Activity',
+        entityId: activity.id,
+        schoolId: activity.schoolId,
+        blockId: activity.blockId,
+        districtId: activity.districtId,
+        metadata: { target: visibility, note: input.attestation?.note },
+      });
+    }
+
     return activity;
   });
 
@@ -563,6 +676,10 @@ function describeBlockers(blockers: string[]): string {
   const messages: Record<string, string> = {
     NOT_SUBMITTED: 'this activity has not been submitted for review',
     DESCRIPTION_TOO_SHORT: 'the description is too short to be a useful record',
+    ATTESTATION_REQUIRED:
+      'sending work beyond the school needs the head teacher to read and confirm the attestation',
+    BLOCK_CLEARANCE_REQUIRED:
+      'the open web needs a block officer to have cleared this first, and this activity has not been',
     STUDENT_CONSENT_MISSING: 'guardian consent is missing for a named student',
     MEDIA_CONSENT_MISSING: 'a photograph has not been confirmed against a consent slip',
     VISIBILITY_ABOVE_ROLE: 'your role cannot approve content at that visibility',

@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { getPrisma } from '../lib/prisma.js';
 import { authRoutes } from '../modules/auth/auth.routes.js';
 import { orgRoutes } from '../modules/org/org.routes.js';
+import { claimRoutes } from '../modules/org/claim.routes.js';
 import { studentRoutes } from '../modules/student/student.routes.js';
 import { activityRoutes } from '../modules/activity/activity.routes.js';
 import { reportRoutes } from '../modules/report/report.routes.js';
@@ -31,6 +32,7 @@ export const registerRoutes: FastifyPluginAsync = async (app) => {
 
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(orgRoutes);
+  await app.register(claimRoutes);
   await app.register(studentRoutes);
   await app.register(activityRoutes);
   await app.register(reportRoutes);

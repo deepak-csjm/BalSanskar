@@ -1,10 +1,13 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import {
+  ATTESTATION_TEXT,
   createActivitySchema,
+  decideClearanceSchema,
   giveAppreciationSchema,
   idSchema,
   listActivitiesQuerySchema,
+  listClearanceQuerySchema,
   moderateActivitySchema,
   requestUploadSchema,
   submitActivitySchema,
@@ -24,6 +27,7 @@ import {
   updateActivity,
 } from './activity.service.js';
 import { createUploadTicket } from './media.service.js';
+import { decideClearance, getSchoolTrust, listClearanceQueue } from './clearance.service.js';
 
 const idParams = z.object({ id: idSchema });
 const mediaParams = z.object({ id: idSchema, mediaId: idSchema });
@@ -100,6 +104,35 @@ export const activityRoutes: FastifyPluginAsync = async (app) => {
       return reply.send(await giveAppreciation(prisma, actor, id, input, request.auditContext()));
     },
   );
+
+  // ---------------------------------------------------------------------------
+  // Clearance: the gate out of the school
+  // ---------------------------------------------------------------------------
+
+  app.get('/clearance-queue', { preHandler: app.requireAuth }, async (request, reply) => {
+    const actor = request.requirePermission('activity:clear');
+    const query = parseOrThrow(listClearanceQuerySchema, request.query);
+    return reply.send(await listClearanceQueue(prisma, actor, query));
+  });
+
+  app.post('/activities/:id/clearance', { preHandler: app.requireAuth }, async (request, reply) => {
+    const actor = request.requirePermission('activity:clear');
+    const { id } = parseOrThrow(idParams, request.params);
+    const input = parseOrThrow(decideClearanceSchema, request.body);
+    return reply.send(await decideClearance(prisma, actor, id, input, request.auditContext()));
+  });
+
+  /** A school's standing, and how much of its work gets a second look. */
+  app.get('/schools/:id/trust', { preHandler: app.requireAuth }, async (request, reply) => {
+    const actor = request.requirePermission('school:read');
+    const { id } = parseOrThrow(idParams, request.params);
+    return reply.send(await getSchoolTrust(prisma, actor, id));
+  });
+
+  /** The statement a head teacher confirms before work leaves the school. */
+  app.get('/attestation-text', async (_request, reply) => {
+    return reply.header('cache-control', 'public, max-age=3600').send(ATTESTATION_TEXT);
+  });
 
   app.post('/uploads', { preHandler: app.requireAuth }, async (request, reply) => {
     const actor = request.requirePermission('activity:create');

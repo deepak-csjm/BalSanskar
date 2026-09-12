@@ -146,6 +146,47 @@ enum OtpPurpose {
   PHONE_CHANGE
 }
 
+/// Whether a school has been confirmed by the block office. A school that has
+/// not been can hold nothing: no students, no activities, no uploads.
+enum SchoolStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+}
+
+/// How much of a school's escalated work gets a second pair of eyes at the
+/// block. A school earns lighter oversight by having a clean record, and loses
+/// it the moment something is returned. See docs/integrity.md.
+enum TrustTier {
+  NEW
+  STANDARD
+  TRUSTED
+  WATCH
+}
+
+enum ClaimStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+/// The gate between a school's own record and everyone else's view of it.
+enum ClearanceState {
+  /// The activity stays at school visibility; nothing to clear.
+  NOT_REQUIRED
+  /// Waiting for the head teacher's attestation.
+  AWAITING_ATTESTATION
+  /// Attested and waiting for a block officer.
+  AWAITING_BLOCK
+  /// Attested, unflagged, and not drawn in the sample.
+  AUTO_CLEARED
+  /// A block officer confirmed it.
+  CLEARED
+  /// A block officer sent it back.
+  RETURNED
+}
+
 // ---------------------------------------------------------------------------
 // Administrative geography
 // ---------------------------------------------------------------------------
@@ -163,6 +204,7 @@ model District {
   users        User[]
   activities   Activity[]
   achievements Achievement[]
+  claims       SchoolClaim[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -183,6 +225,7 @@ model Block {
   users        User[]
   activities   Activity[]
   achievements Achievement[]
+  claims       SchoolClaim[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -211,10 +254,23 @@ model School {
   contactPhone  String?
   isActive      Boolean    @default(true)
 
+  /// A school claimed by a head teacher starts here and can hold nothing until
+  /// the block office confirms it. Schools loaded from a UDISE export are
+  /// created ACTIVE.
+  status SchoolStatus @default(ACTIVE)
+
+  /// Drives how much of this school's escalated work a block officer sees.
+  trustTier TrustTier @default(NEW)
+  /// Counters behind the tier, maintained when an activity clears or returns.
+  clearedCount  Int       @default(0)
+  returnedCount Int       @default(0)
+  lastReturnedAt DateTime?
+
   users        User[]
   students     Student[]
   activities   Activity[]
   achievements Achievement[]
+  claims       SchoolClaim[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -222,7 +278,63 @@ model School {
   @@index([blockId])
   @@index([districtId])
   @@index([nameHi])
+  @@index([status])
   @@map("schools")
+}
+
+/// A head teacher's claim on a school, waiting for the block office.
+///
+/// A school is never created by a user; it is claimed against its UDISE code
+/// and confirmed by the officer who knows the schools in that block by name.
+/// See docs/integrity.md.
+model SchoolClaim {
+  id        String      @id @default(cuid())
+  udiseCode String
+  status    ClaimStatus @default(PENDING)
+
+  /// The school this claim resolved to. Set on verification — either an
+  /// existing register entry or one created at that moment.
+  schoolId String?
+  school   School? @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+
+  /// Where the claimant says the school is. Routes the claim to an officer.
+  blockId    String
+  block      Block    @relation(fields: [blockId], references: [id], onDelete: Restrict)
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Restrict)
+
+  proposedNameHi String
+  proposedNameEn String?
+  proposedType   SchoolType @default(PRIMARY)
+  villageOrWard  String?
+
+  /// The claimant. Their phone is verified by one-time code before the claim
+  /// exists, so a claim always traces to a number.
+  claimantName         String
+  claimantPhone        String
+  claimantDesignation  String?
+  claimantEmployeeCode String?
+
+  /// Storage key of a photograph of the school board, if the claimant sent one.
+  evidenceKey String?
+
+  reviewedById String?
+  reviewedBy   User?     @relation("ClaimReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt   DateTime?
+  reviewNote   String?
+
+  /// A claim that nobody acts on frees the code again rather than locking a
+  /// school out for good.
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([blockId, status])
+  @@index([districtId, status])
+  @@index([udiseCode])
+  @@index([claimantPhone])
+  @@map("school_claims")
 }
 
 // ---------------------------------------------------------------------------
@@ -264,6 +376,9 @@ model User {
 
   authoredActivities   Activity[]    @relation("ActivityAuthor")
   reviewedActivities   Activity[]    @relation("ActivityReviewer")
+  attestedActivities   Activity[]    @relation("ActivityAttestor")
+  clearedActivities    Activity[]    @relation("ActivityClearance")
+  reviewedClaims       SchoolClaim[] @relation("ClaimReviewer")
   createdStudents      Student[]     @relation("StudentCreatedBy")
   recordedConsents     MediaConsent[] @relation("ConsentRecordedBy")
   revokedConsents      MediaConsent[] @relation("ConsentRevokedBy")
@@ -433,6 +548,32 @@ model Activity {
   reviewedAt      DateTime?
   rejectionReason String?
 
+  // --- Leaving the school -------------------------------------------------
+  // Work that stays at SCHOOL visibility needs none of this. Anything above it
+  // passes the gate described in docs/integrity.md.
+
+  /// The head teacher's named, dated statement that this happened and that the
+  /// consent slips are on file. Not a checkbox: it is stored and shown to the
+  /// block officer alongside the activity.
+  attestedById String?
+  attestedBy   User?     @relation("ActivityAttestor", fields: [attestedById], references: [id], onDelete: SetNull)
+  attestedAt   DateTime?
+  attestationNote String?
+
+  clearance ClearanceState @default(NOT_REQUIRED)
+  /// Where the activity is trying to get to. `visibility` is what it has
+  /// actually been granted, and never exceeds what has been cleared.
+  clearanceTarget VisibilityLevel?
+  clearedById     String?
+  clearedBy       User?     @relation("ActivityClearance", fields: [clearedById], references: [id], onDelete: SetNull)
+  clearedAt       DateTime?
+  clearanceNote   String?
+
+  /// Why this is in the block's queue. Higher is more suspicious; the queue is
+  /// ordered by it rather than by arrival.
+  riskScore Int      @default(0)
+  riskFlags String[]
+
   media             ActivityMedia[]
   recognisedStudents ActivityStudent[]
   appreciations     Appreciation[]
@@ -448,6 +589,8 @@ model Activity {
   @@index([authorId, status])
   @@index([status, visibility, publishedAt])
   @@index([category])
+  /// The block clearance queue: one indexed scan, ordered by risk.
+  @@index([blockId, clearance, riskScore])
   @@map("activities")
 }
 
@@ -464,6 +607,10 @@ model MediaAsset {
   width       Int?
   height      Int?
   checksum    String?
+  /// 64-bit difference hash of the image, as 16 hex characters, computed in the
+  /// browser before upload. Survives re-compression and resizing, which is what
+  /// makes it useful for catching a recycled photograph. Not a security hash.
+  perceptualHash String?
 
   uploadedById String
   uploadedBy   User   @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
@@ -480,6 +627,7 @@ model MediaAsset {
 
   @@index([uploadedById])
   @@index([attachedAt])
+  @@index([perceptualHash])
   @@map("media_assets")
 }
 

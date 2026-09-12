@@ -6,6 +6,7 @@ import {
   type VisibilityLevel,
 } from './enums.js';
 import { canApproveVisibility } from './rbac.js';
+import { needsClearance, type ClearanceState } from './integrity.js';
 
 /**
  * Child-safety and workflow rules that both the server and the browser need to
@@ -25,6 +26,10 @@ export interface PublishCandidate {
   /** Media the school has not confirmed a consent slip for. */
   mediaWithoutConsentCount: number;
   descriptionLength: number;
+  /** How far the activity has got through the gate out of its school. */
+  clearance?: ClearanceState;
+  /** Whether the caller is supplying the head teacher's attestation now. */
+  attestingNow?: boolean;
 }
 
 export const PUBLISH_BLOCKERS = {
@@ -34,6 +39,10 @@ export const PUBLISH_BLOCKERS = {
   MEDIA_CONSENT_MISSING: 'MEDIA_CONSENT_MISSING',
   VISIBILITY_ABOVE_ROLE: 'VISIBILITY_ABOVE_ROLE',
   VISIBILITY_ABOVE_REQUEST: 'VISIBILITY_ABOVE_REQUEST',
+  /** Leaving the school needs the head teacher's named statement. */
+  ATTESTATION_REQUIRED: 'ATTESTATION_REQUIRED',
+  /** The open web additionally needs a block officer to have actually looked. */
+  BLOCK_CLEARANCE_REQUIRED: 'BLOCK_CLEARANCE_REQUIRED',
 } as const;
 export type PublishBlocker = (typeof PUBLISH_BLOCKERS)[keyof typeof PUBLISH_BLOCKERS];
 
@@ -68,6 +77,25 @@ export function evaluatePublishBlockers(
 
   if (requestedVisibility && VISIBILITY_RANK[visibility] > VISIBILITY_RANK[requestedVisibility]) {
     blockers.push(PUBLISH_BLOCKERS.VISIBILITY_ABOVE_REQUEST);
+  }
+
+  // Leaving the school at all needs the head teacher's named statement — a
+  // colleague's click is not an independent check on a colleague's work.
+  if (needsClearance(visibility)) {
+    const alreadyAttested =
+      activity.clearance === 'AWAITING_BLOCK' ||
+      activity.clearance === 'AUTO_CLEARED' ||
+      activity.clearance === 'CLEARED';
+    if (!alreadyAttested && !activity.attestingNow) {
+      blockers.push(PUBLISH_BLOCKERS.ATTESTATION_REQUIRED);
+    }
+  }
+
+  // The open web is the one destination that always costs a block officer's
+  // actual attention. Auto-clearing on a school's own record is enough to reach
+  // other educators; it is not enough to reach everyone.
+  if (visibility === 'PUBLIC' && activity.clearance !== 'CLEARED') {
+    blockers.push(PUBLISH_BLOCKERS.BLOCK_CLEARANCE_REQUIRED);
   }
 
   // Consent gates apply only when the work leaves the department's own systems.

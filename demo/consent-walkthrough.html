@@ -520,10 +520,7 @@
   .register {
     border: 1px solid var(--rule-strong);
     border-radius: var(--r-sm);
-    background: repeating-linear-gradient(
-      var(--surface) 0 1.85rem,
-      var(--rule) 1.85rem 1.9rem
-    );
+    background: repeating-linear-gradient(var(--surface) 0 1.85rem, var(--rule) 1.85rem 1.9rem);
     padding: 0.1rem 0.7rem;
   }
 
@@ -885,8 +882,7 @@
       methodVerbal: 'व्यक्तिगत रूप से मौखिक',
       history: 'सहमति का रिकॉर्ड',
       noHistory: 'अभी कोई रिकॉर्ड नहीं।',
-      withdrawWarn:
-        'सहमति वापस लेते ही इस बच्चे की सारी सार्वजनिक फ़ोटो तुरंत हटा दी जाएँगी।',
+      withdrawWarn: 'सहमति वापस लेते ही इस बच्चे की सारी सार्वजनिक फ़ोटो तुरंत हटा दी जाएँगी।',
       withdrawReason: 'कारण',
 
       showcaseTitle: 'हमारे विद्यालयों का कार्य',
@@ -990,14 +986,14 @@
       history: 'Consent record',
       noHistory: 'Nothing recorded yet.',
       withdrawWarn:
-        "Withdrawing consent immediately removes every public photograph of this child.",
+        'Withdrawing consent immediately removes every public photograph of this child.',
       withdrawReason: 'Reason',
 
       showcaseTitle: 'The work of our schools',
       showcaseSub: 'Verified activities approved for public view',
       showcaseEmpty: 'No public activities yet.',
       surnameNote:
-        "Note: a child appears here by given name and class only — never the full name, roll number or guardian.",
+        'Note: a child appears here by given name and class only — never the full name, roll number or guardian.',
 
       classLabel: 'Class',
       guardianLabel: 'Guardian',
@@ -1041,9 +1037,7 @@
           cls: '5',
           guardian: { hi: 'श्यामलाल', en: 'Shyamlal' },
           consent: 'GRANTED',
-          history: [
-            { status: 'GRANTED', method: 'PAPER', by: 'teacher', on: '2026-07-14' },
-          ],
+          history: [{ status: 'GRANTED', method: 'PAPER', by: 'teacher', on: '2026-07-14' }],
         },
         {
           id: 's3',
@@ -1052,9 +1046,7 @@
           cls: '4',
           guardian: { hi: 'गीता देवी', en: 'Geeta Devi' },
           consent: 'GRANTED',
-          history: [
-            { status: 'GRANTED', method: 'PAPER', by: 'teacher', on: '2026-07-14' },
-          ],
+          history: [{ status: 'GRANTED', method: 'PAPER', by: 'teacher', on: '2026-07-14' }],
         },
         {
           id: 's4',
@@ -1063,9 +1055,7 @@
           cls: '5',
           guardian: { hi: 'रामदुलारी', en: 'Ramdulari' },
           consent: 'DENIED',
-          history: [
-            { status: 'DENIED', method: 'VERBAL', by: 'teacher', on: '2026-07-20' },
-          ],
+          history: [{ status: 'DENIED', method: 'VERBAL', by: 'teacher', on: '2026-07-20' }],
         },
       ],
       activities: [
@@ -1315,7 +1305,10 @@
   var STEPS = {
     hi: [
       { id: 'submit', text: 'शिक्षक बनकर “पठन कोना” गतिविधि खोलिए और उसे सार्वजनिक के लिए भेजिए।' },
-      { id: 'ceiling', text: 'प्रधानाध्यापक बनकर देखिए — सार्वजनिक का विकल्प उनके पास है ही नहीं।' },
+      {
+        id: 'ceiling',
+        text: 'प्रधानाध्यापक बनकर देखिए — सार्वजनिक का विकल्प उनके पास है ही नहीं।',
+      },
       { id: 'blocked', text: 'जनपद अधिकारी बनकर सार्वजनिक करने की कोशिश कीजिए। रुक जाएगा।' },
       { id: 'consent', text: 'शिक्षक बनकर अंजलि के अभिभावक की सहमति दर्ज कीजिए।' },
       { id: 'published', text: 'अब जनपद अधिकारी बनकर फिर से प्रकाशित कीजिए। इस बार हो जाएगा।' },
@@ -1323,11 +1316,23 @@
       { id: 'withdrawn', text: 'सहमति वापस लीजिए। प्रदर्शनी से फ़ोटो उसी क्षण हट जाएगी।' },
     ],
     en: [
-      { id: 'submit', text: 'As the teacher, open the reading-corner activity and send it for public review.' },
-      { id: 'ceiling', text: 'As the head teacher, look at the options — public is not one of them.' },
-      { id: 'blocked', text: 'As the district officer, try to publish it publicly. It will be refused.' },
+      {
+        id: 'submit',
+        text: 'As the teacher, open the reading-corner activity and send it for public review.',
+      },
+      {
+        id: 'ceiling',
+        text: 'As the head teacher, look at the options — public is not one of them.',
+      },
+      {
+        id: 'blocked',
+        text: 'As the district officer, try to publish it publicly. It will be refused.',
+      },
       { id: 'consent', text: "As the teacher, record consent from Anjali's guardian." },
-      { id: 'published', text: 'Back as the district officer, publish again. This time it goes through.' },
+      {
+        id: 'published',
+        text: 'Back as the district officer, publish again. This time it goes through.',
+      },
       { id: 'showcase', text: 'Open the showcase — only the given name appears.' },
       { id: 'withdrawn', text: 'Withdraw consent. The photograph leaves the showcase at once.' },
     ],
@@ -1391,7 +1396,7 @@
       },
       blocked: {
         h: 'No consent, no public publication',
-        p: "A child named on this activity has no guardian consent recorded, so publication stopped. On the real platform this check runs again inside the database at the moment of publishing.",
+        p: 'A child named on this activity has no guardian consent recorded, so publication stopped. On the real platform this check runs again inside the database at the moment of publishing.',
       },
       consent: {
         h: 'Consent is a record, not a checkbox',
@@ -1607,11 +1612,14 @@
       html += '<p class="notice">' + esc(t('nothingToReview')) + '</p>';
     }
 
-    var list = S.role === 'TEACHER' ? visible : pending.concat(
-      visible.filter(function (a) {
-        return a.status !== 'PENDING';
-      }),
-    );
+    var list =
+      S.role === 'TEACHER'
+        ? visible
+        : pending.concat(
+            visible.filter(function (a) {
+              return a.status !== 'PENDING';
+            }),
+          );
 
     if (list.length === 0) {
       html += '<p class="empty">' + esc(t('noActivities')) + '</p>';
@@ -1751,7 +1759,8 @@
         var allowed = ['SCHOOL', 'BLOCK', 'DISTRICT', 'PUBLIC'].filter(function (v) {
           return canApprove(S.role, v);
         });
-        var chosen = allowed.indexOf(act.requested) >= 0 ? act.requested : allowed[allowed.length - 1];
+        var chosen =
+          allowed.indexOf(act.requested) >= 0 ? act.requested : allowed[allowed.length - 1];
 
         html +=
           '<div class="card"><p class="eyebrow">' +
@@ -2109,11 +2118,7 @@
     // in the same action, not in a queue.
     var pulled = 0;
     S.activities.forEach(function (a) {
-      if (
-        a.status === 'PUBLISHED' &&
-        a.visibility === 'PUBLIC' &&
-        a.students.indexOf(id) >= 0
-      ) {
+      if (a.status === 'PUBLISHED' && a.visibility === 'PUBLIC' && a.students.indexOf(id) >= 0) {
         a.visibility = 'DISTRICT';
         pulled++;
       }
@@ -2136,7 +2141,11 @@
   // Wiring
   // -------------------------------------------------------------------
   document.addEventListener('click', function (ev) {
-    var el = ev.target.closest ? ev.target.closest('[data-role],[data-tab],[data-open],[data-back],[data-submit],[data-publish],[data-reject],[data-consent],[data-withdraw],#copy-notes') : null;
+    var el = ev.target.closest
+      ? ev.target.closest(
+          '[data-role],[data-tab],[data-open],[data-back],[data-submit],[data-publish],[data-reject],[data-consent],[data-withdraw],#copy-notes',
+        )
+      : null;
     if (!el) return;
 
     if (el.dataset.role) {
@@ -2145,7 +2154,12 @@
       if (S.tab === 'roster' && S.role === 'OFFICER') S.tab = 'home';
       // Reaching the review queue as a head teacher is itself the moment
       // the ceiling becomes visible.
-      if (S.role === 'HEAD' && S.activities.some(function (a) { return a.status === 'PENDING'; })) {
+      if (
+        S.role === 'HEAD' &&
+        S.activities.some(function (a) {
+          return a.status === 'PENDING';
+        })
+      ) {
         S.why = 'ceiling';
       }
       return render();

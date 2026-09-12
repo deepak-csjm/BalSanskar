@@ -19,6 +19,15 @@ export const PERMISSIONS = [
   'school:read',
   'school:create',
   'school:update',
+  /**
+   * Confirm a head teacher's claim on a school, bringing it into the register.
+   *
+   * Deliberately separate from `school:create`: the block officer is the person
+   * who knows whether a claimant really is the head teacher of that school, but
+   * giving them a free hand to invent schools is a different and larger power.
+   * This permission only ever resolves a claim someone else raised.
+   */
+  'school:verify_claim',
 
   // People
   'user:read',
@@ -41,6 +50,15 @@ export const PERMISSIONS = [
   'activity:submit',
   'activity:moderate',
   'activity:archive',
+  /**
+   * Clear a school's work for the block and above, or send it back.
+   *
+   * Deliberately withheld from the head teacher. They already moderate and
+   * attest; letting the same office also clear its own work would put the
+   * whole chain inside one school, which is the failure this permission exists
+   * to prevent.
+   */
+  'activity:clear',
 
   'achievement:create',
   'achievement:verify',
@@ -87,6 +105,11 @@ const BLOCK_ADMIN_PERMISSIONS: Permission[] = [
   ...PRINCIPAL_PERMISSIONS,
   'user:suspend',
   'audit:read',
+  // The two powers that make the block office the real check on a school:
+  // confirming that a school and its head teacher exist, and deciding whether
+  // that school's work may be seen outside it.
+  'school:verify_claim',
+  'activity:clear',
 ];
 
 const DISTRICT_ADMIN_PERMISSIONS: Permission[] = [

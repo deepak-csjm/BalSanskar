@@ -228,3 +228,90 @@ export const validActivityPayload = {
   classLevels: ['5'] as const,
   participantCount: 32,
 };
+
+/**
+ * Drives an activity all the way through the escalation gate.
+ *
+ * Work leaving the school now needs the head teacher's attestation and, for a
+ * NEW school, a block officer's clearance. Tests that care about something else
+ * — consent, reporting, appreciation — should not each re-implement that chain.
+ *
+ * Returns the activity id.
+ */
+export async function publishThroughGate(
+  app: FastifyInstance,
+  options: {
+    activityId: string;
+    author: TestUser;
+    head: TestUser;
+    blockOfficer?: TestUser;
+    districtOfficer?: TestUser;
+    visibility: 'SCHOOL' | 'BLOCK' | 'DISTRICT' | 'PUBLIC';
+  },
+): Promise<void> {
+  const { activityId, head, visibility } = options;
+
+  await app.inject({
+    method: 'POST',
+    url: `/v1/activities/${activityId}/submit`,
+    headers: auth(options.author),
+    payload: { requestedVisibility: visibility },
+  });
+
+  if (visibility === 'SCHOOL') {
+    const published = await app.inject({
+      method: 'POST',
+      url: `/v1/activities/${activityId}/moderate`,
+      headers: auth(head),
+      payload: { decision: 'PUBLISH', visibility: 'SCHOOL' },
+    });
+    if (published.statusCode !== 200) {
+      throw new Error(`Publish failed: ${published.statusCode} ${published.body}`);
+    }
+    return;
+  }
+
+  // Anything wider than the school: the head teacher attests, and the block
+  // clears it into view. PUBLIC additionally needs a district officer to
+  // promote it once the block has cleared it.
+  const target = visibility === 'PUBLIC' ? 'DISTRICT' : visibility;
+  const attested = await app.inject({
+    method: 'POST',
+    url: `/v1/activities/${activityId}/moderate`,
+    headers: auth(head),
+    payload: {
+      decision: 'PUBLISH',
+      visibility: target,
+      attestation: { confirmed: true },
+    },
+  });
+  if (attested.statusCode !== 200) {
+    throw new Error(`Attestation failed: ${attested.statusCode} ${attested.body}`);
+  }
+
+  const officer = options.blockOfficer;
+  if (!officer) throw new Error('A block officer is required to clear work beyond the school');
+  const cleared = await app.inject({
+    method: 'POST',
+    url: `/v1/activities/${activityId}/clearance`,
+    headers: auth(officer),
+    payload: { decision: 'CLEAR' },
+  });
+  if (cleared.statusCode !== 200) {
+    throw new Error(`Clearance failed: ${cleared.statusCode} ${cleared.body}`);
+  }
+
+  if (visibility === 'PUBLIC') {
+    const district = options.districtOfficer;
+    if (!district) throw new Error('A district officer is required to reach the open web');
+    const promoted = await app.inject({
+      method: 'POST',
+      url: `/v1/activities/${activityId}/moderate`,
+      headers: auth(district),
+      payload: { decision: 'PUBLISH', visibility: 'PUBLIC' },
+    });
+    if (promoted.statusCode !== 200) {
+      throw new Error(`Public publish failed: ${promoted.statusCode} ${promoted.body}`);
+    }
+  }
+}

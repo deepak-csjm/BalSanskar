@@ -7,6 +7,7 @@ import {
   createUser,
   prisma,
   resetDatabase,
+  publishThroughGate,
   seedGeography,
   teardown,
   type Geography,
@@ -29,6 +30,7 @@ describe('reporting and the public showcase', () => {
   let districtAdmin: TestUser;
   let districtAdminB: TestUser;
   let stateAdmin: TestUser;
+  let blockOfficer: TestUser;
 
   beforeAll(async () => {
     app = await createTestApp();
@@ -50,6 +52,11 @@ describe('reporting and the public showcase', () => {
     principal = await createUser(app, {
       role: 'PRINCIPAL',
       schoolId: geo.schoolA1,
+      blockId: geo.blockA1,
+      districtId: geo.districtA,
+    });
+    blockOfficer = await createUser(app, {
+      role: 'BLOCK_ADMIN',
       blockId: geo.blockA1,
       districtId: geo.districtA,
     });
@@ -79,20 +86,14 @@ describe('reporting and the public showcase', () => {
       },
     });
     const id = (created.json() as { id: string }).id;
-    await app.inject({
-      method: 'POST',
-      url: `/v1/activities/${id}/submit`,
-      headers: auth(teacher),
-      payload: { requestedVisibility: options.visibility },
+    await publishThroughGate(app, {
+      activityId: id,
+      author: teacher,
+      head: principal,
+      blockOfficer,
+      districtOfficer: districtAdmin,
+      visibility: options.visibility,
     });
-    const moderator = options.visibility === 'PUBLIC' ? districtAdmin : principal;
-    const moderated = await app.inject({
-      method: 'POST',
-      url: `/v1/activities/${id}/moderate`,
-      headers: auth(moderator),
-      payload: { decision: 'PUBLISH', visibility: options.visibility },
-    });
-    expect(moderated.statusCode).toBe(200);
     return id;
   }
 
