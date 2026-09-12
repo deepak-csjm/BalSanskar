@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BalSanskar.Web/BalSanskar.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BalSanskar.Tests/BalSanskar.Tests.csproj" />
+  </Folder>
+</Solution>

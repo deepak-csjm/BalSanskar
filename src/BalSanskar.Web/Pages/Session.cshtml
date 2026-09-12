@@ -1,0 +1,82 @@
+@page
+@model SessionModel
+@{ ViewData["Title"] = Model.Session.Theme; }
+
+<h1>@Model.Session.Theme</h1>
+<p class="sub">
+    @Model.Session.Date.ToString("dddd, d MMMM yyyy") · taught by @Model.Session.TaughtBy
+</p>
+
+<h2>Message for parents</h2>
+<p class="sub" style="margin-bottom:.5rem">Copy this into the parents' group.</p>
+<div class="recap" id="recap">@Model.Recap</div>
+<button class="btn wide" type="button" id="copy" data-label="Copy message">Copy message</button>
+
+<h2>What happened in class</h2>
+@if (!string.IsNullOrWhiteSpace(Model.Session.Story))
+{
+    <div class="card"><strong>Story or reading</strong><div class="snippet" style="color:var(--ink);white-space:pre-wrap">@Model.Session.Story</div></div>
+}
+@if (!string.IsNullOrWhiteSpace(Model.Session.Activity))
+{
+    <div class="card"><strong>What the children did</strong><div class="snippet" style="color:var(--ink);white-space:pre-wrap">@Model.Session.Activity</div></div>
+}
+@if (!string.IsNullOrWhiteSpace(Model.Session.HomePractice))
+{
+    <div class="card"><strong>At home this week</strong><div class="snippet" style="color:var(--ink);white-space:pre-wrap">@Model.Session.HomePractice</div></div>
+}
+@if (string.IsNullOrWhiteSpace(Model.Session.Story)
+     && string.IsNullOrWhiteSpace(Model.Session.Activity)
+     && string.IsNullOrWhiteSpace(Model.Session.HomePractice))
+{
+    <p class="sub">Only the theme was recorded for this session.</p>
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Session.TeacherNote))
+{
+    <h2>Note for the next teacher</h2>
+    <p class="sub" style="margin-bottom:.5rem">Not shared with parents.</p>
+    <div class="note">@Model.Session.TeacherNote</div>
+}
+
+<div class="actions">
+    <a class="btn secondary" asp-page="/Log" asp-route-id="@Model.Session.Id">Edit</a>
+    <a class="btn secondary" asp-page="/Log" asp-route-from="@Model.Session.Id">Run this again</a>
+    <a class="btn secondary" asp-page="/Index">Back to journal</a>
+</div>
+
+<form method="post" asp-page-handler="Delete" asp-route-id="@Model.Session.Id"
+      onsubmit="return confirm('Delete this write-up? This cannot be undone.');"
+      style="margin-top:2rem">
+    <button type="submit" class="btn secondary" style="border-color:var(--err);color:var(--err)">Delete this write-up</button>
+</form>
+
+<script>
+  (function () {
+    var btn = document.getElementById('copy');
+    var box = document.getElementById('recap');
+    if (!btn || !box) return;
+    btn.addEventListener('click', function () {
+      var text = box.innerText;
+      var done = function () {
+        btn.textContent = 'Copied';
+        setTimeout(function () { btn.textContent = btn.dataset.label; }, 1800);
+      };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done, select);
+      } else {
+        select();
+      }
+      function select() {
+        // Fallback: put the text under the user's cursor so they can copy it themselves.
+        var r = document.createRange();
+        r.selectNodeContents(box);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(r);
+        btn.textContent = 'Selected — press copy';
+        setTimeout(function () { btn.textContent = btn.dataset.label; }, 2500);
+      }
+    });
+  })();
+</script>

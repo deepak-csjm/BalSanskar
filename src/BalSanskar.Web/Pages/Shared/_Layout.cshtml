@@ -1,0 +1,31 @@
+@inject IOptions<GroupOptions> GroupOpts
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#a2552a" />
+    <title>@ViewData["Title"] · BalSanskar</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+<header class="site">
+    <div class="wrap">
+        <a class="brand" asp-page="/Index">@GroupOpts.Value.Name</a>
+        <nav>
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a asp-page="/Index">Journal</a>
+                <a asp-page="/Log">Write up</a>
+                <form method="post" asp-page="/Account/Logout" style="display:inline">
+                    <button type="submit">Sign out</button>
+                </form>
+            }
+        </nav>
+    </div>
+</header>
+<main class="wrap">
+    @RenderBody()
+</main>
+</body>
+</html>

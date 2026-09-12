@@ -1,0 +1,28 @@
+@page
+@model BalSanskar.Web.Pages.Account.LoginModel
+@{ ViewData["Title"] = "Sign in"; }
+
+<h1>Sign in</h1>
+<p class="sub">For teachers of this class.</p>
+
+@if (!string.IsNullOrEmpty(Model.Error)) { <div class="msg err">@Model.Error</div> }
+
+<form method="post">
+    <label>Email
+        <input type="email" asp-for="Input.Email" autocomplete="username" required autofocus />
+    </label>
+    <span asp-validation-for="Input.Email" class="field-err"></span>
+
+    <label>Password
+        <input type="password" asp-for="Input.Password" autocomplete="current-password" required />
+    </label>
+    <span asp-validation-for="Input.Password" class="field-err"></span>
+
+    <div class="actions">
+        <button class="btn wide" type="submit">Sign in</button>
+    </div>
+</form>
+
+<p class="sub" style="margin-top:1.5rem">
+    New teacher? <a asp-page="/Account/Register">Create an account</a>
+</p>

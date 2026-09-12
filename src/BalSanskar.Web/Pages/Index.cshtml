@@ -1,0 +1,49 @@
+@page
+@model IndexModel
+@{ ViewData["Title"] = "Journal"; }
+
+<h1>Class journal</h1>
+<p class="sub">Every session this class has run, newest first.</p>
+
+<form method="get" class="searchbar">
+    <input type="search" name="q" value="@Model.Query" placeholder="Search themes, stories, notes…" aria-label="Search the journal" />
+    <button class="btn secondary" type="submit">Search</button>
+</form>
+
+<a class="btn wide" asp-page="/Log">Write up a session</a>
+
+@if (Model.Sessions.Count == 0)
+{
+    <div class="empty">
+        @if (string.IsNullOrWhiteSpace(Model.Query))
+        {
+            <p>Nothing here yet.</p>
+            <p>Write up your next class and you will have a parent message in about two minutes.</p>
+        }
+        else
+        {
+            <p>No sessions match &ldquo;@Model.Query&rdquo;.</p>
+        }
+    </div>
+}
+else
+{
+    <h2>@Model.Sessions.Count session@(Model.Sessions.Count == 1 ? "" : "s")</h2>
+    @foreach (var s in Model.Sessions)
+    {
+        <a class="card" asp-page="/Session" asp-route-id="@s.Id">
+            <div class="date">@s.Date.ToString("ddd, d MMM yyyy")</div>
+            <div class="theme">@s.Theme</div>
+            @if (!string.IsNullOrWhiteSpace(s.Story))
+            {
+                <div class="snippet">@Truncate(s.Story, 110)</div>
+            }
+            <div class="who">Taught by @s.TaughtBy</div>
+        </a>
+    }
+}
+
+@functions {
+    static string Truncate(string value, int max) =>
+        value.Length <= max ? value : string.Concat(value.AsSpan(0, max).TrimEnd(), "…");
+}

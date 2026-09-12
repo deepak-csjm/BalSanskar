@@ -1,0 +1,26 @@
+# Fly.io deployment. One machine, one volume — the whole class fits in a
+# few megabytes and there is nothing to scale.
+app = "balsanskar"
+primary_region = "bom"
+
+[build]
+
+[env]
+  ASPNETCORE_ENVIRONMENT = "Production"
+  Database__Path = "/data/balsanskar.db"
+
+[[mounts]]
+  source = "balsanskar_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  # One machine only: SQLite has a single writer and there is no need for more.
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

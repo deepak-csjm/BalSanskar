@@ -1,0 +1,55 @@
+@page
+@model BalSanskar.Web.Pages.Account.RegisterModel
+@{ ViewData["Title"] = "Create account"; }
+
+<h1>Create an account</h1>
+
+@if (Model.RegistrationClosed)
+{
+    <p class="sub">Registration is closed. Ask whoever set this up to share the invite code.</p>
+}
+else
+{
+    <p class="sub">
+        @(Model.IsFirstAccount
+            ? "You are the first teacher here, so no invite code is needed."
+            : "You will need the invite code for this class.")
+    </p>
+
+    @if (!string.IsNullOrEmpty(Model.Error)) { <div class="msg err">@Model.Error</div> }
+
+    <form method="post">
+        <label>Your name
+            <span class="hint">Shown on the sessions you write up.</span>
+            <input type="text" asp-for="Input.DisplayName" autocomplete="name" required autofocus />
+        </label>
+        <span asp-validation-for="Input.DisplayName" class="field-err"></span>
+
+        <label>Email
+            <input type="email" asp-for="Input.Email" autocomplete="username" required />
+        </label>
+        <span asp-validation-for="Input.Email" class="field-err"></span>
+
+        <label>Password
+            <span class="hint">At least 12 characters. A short phrase you will remember works well.</span>
+            <input type="password" asp-for="Input.Password" autocomplete="new-password" required />
+        </label>
+        <span asp-validation-for="Input.Password" class="field-err"></span>
+
+        @if (!Model.IsFirstAccount)
+        {
+            <label>Invite code
+                <input type="text" asp-for="Input.InviteCode" required />
+            </label>
+            <span asp-validation-for="Input.InviteCode" class="field-err"></span>
+        }
+
+        <div class="actions">
+            <button class="btn wide" type="submit">Create account</button>
+        </div>
+    </form>
+}
+
+<p class="sub" style="margin-top:1.5rem">
+    Already have an account? <a asp-page="/Account/Login">Sign in</a>
+</p>

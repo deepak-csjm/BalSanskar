@@ -1,0 +1,82 @@
+/* Mobile-first, no framework. The teacher is on a phone in a classroom
+   with poor wifi; every kilobyte here is a kilobyte they wait for. */
+:root {
+  --ink: #24201b;
+  --muted: #6b625a;
+  --line: #e3ddd4;
+  --bg: #faf7f2;
+  --card: #ffffff;
+  --accent: #a2552a;
+  --accent-soft: #f4e9e0;
+  --ok: #2f6b46;
+  --err: #a32a2a;
+  --radius: 10px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+.wrap { max-width: 40rem; margin: 0 auto; padding: 0 1rem 4rem; }
+
+header.site { border-bottom: 1px solid var(--line); background: var(--card); }
+header.site .wrap { display: flex; align-items: center; gap: .75rem; padding: .85rem 1rem; }
+header.site a.brand { font-weight: 650; color: var(--ink); text-decoration: none; letter-spacing: -.01em; }
+header.site nav { margin-left: auto; display: flex; gap: 1rem; align-items: center; }
+header.site nav a, header.site nav button {
+  color: var(--muted); text-decoration: none; font-size: .9rem;
+  background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit;
+}
+header.site nav a:hover, header.site nav button:hover { color: var(--accent); }
+
+h1 { font-size: 1.4rem; margin: 1.5rem 0 .25rem; letter-spacing: -.02em; }
+h2 { font-size: 1.05rem; margin: 1.75rem 0 .5rem; }
+.sub { color: var(--muted); font-size: .9rem; margin: 0 0 1.25rem; }
+
+.card {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 1rem; margin-bottom: .75rem;
+}
+a.card { display: block; text-decoration: none; color: inherit; }
+a.card:hover { border-color: var(--accent); }
+.card .date { color: var(--muted); font-size: .82rem; }
+.card .theme { font-weight: 620; font-size: 1.05rem; margin: .15rem 0 .3rem; }
+.card .snippet { color: var(--muted); font-size: .9rem; }
+.card .who { color: var(--muted); font-size: .8rem; margin-top: .5rem; }
+
+label { display: block; font-weight: 560; font-size: .92rem; margin: 1rem 0 .3rem; }
+label .hint { display: block; font-weight: 400; color: var(--muted); font-size: .82rem; margin-top: .1rem; }
+input[type=text], input[type=email], input[type=password], input[type=date], input[type=search], textarea {
+  width: 100%; padding: .6rem .7rem; font: inherit; color: var(--ink);
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+}
+input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+textarea { min-height: 5.5rem; resize: vertical; }
+
+.btn {
+  display: inline-block; padding: .65rem 1.1rem; font: inherit; font-weight: 560;
+  border: 1px solid var(--accent); border-radius: 8px; cursor: pointer;
+  background: var(--accent); color: #fff; text-decoration: none;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn.secondary { background: var(--card); color: var(--accent); }
+.btn.wide { width: 100%; text-align: center; }
+.actions { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: 1.5rem; }
+
+.recap {
+  white-space: pre-wrap; word-wrap: break-word; font-size: .95rem;
+  background: var(--accent-soft); border: 1px solid #e6d3c4;
+  border-radius: var(--radius); padding: 1rem; margin: .5rem 0;
+}
+.note {
+  white-space: pre-wrap; background: #fbf9f4; border-left: 3px solid var(--line);
+  padding: .6rem .85rem; color: var(--muted); font-size: .92rem; border-radius: 0 8px 8px 0;
+}
+.msg { padding: .7rem .9rem; border-radius: 8px; margin: 1rem 0; font-size: .92rem; }
+.msg.ok { background: #eaf3ee; color: var(--ok); }
+.msg.err { background: #f9ecec; color: var(--err); }
+.field-err { color: var(--err); font-size: .85rem; margin-top: .25rem; }
+.empty { text-align: center; color: var(--muted); padding: 2.5rem 1rem; }
+.searchbar { display: flex; gap: .5rem; margin-bottom: 1.25rem; }
+.searchbar input { flex: 1; }
