@@ -3,6 +3,8 @@ import type {
   AchievementLevel,
   ActivityCategory,
   Gender,
+  RiskFlag,
+  SchoolType,
 } from '@balsanskar/shared';
 
 /**
@@ -95,6 +97,66 @@ export const ACHIEVEMENT_LEVEL_LABELS: Record<'hi' | 'en', Record<AchievementLev
 export const GENDER_LABELS: Record<'hi' | 'en', Record<Gender, string>> = {
   hi: { MALE: 'बालक', FEMALE: 'बालिका', OTHER: 'अन्य' },
   en: { MALE: 'Boy', FEMALE: 'Girl', OTHER: 'Other' },
+};
+
+/**
+ * The kinds of school the Basic Shiksha Parishad runs.
+ *
+ * The Hindi is the departmental wording rather than a translation: a head
+ * teacher picking their own school's type should recognise the phrase from the
+ * board outside the building.
+ */
+export const SCHOOL_TYPE_LABELS: Record<'hi' | 'en', Record<SchoolType, string>> = {
+  hi: {
+    PRIMARY: 'प्राथमिक विद्यालय',
+    UPPER_PRIMARY: 'उच्च प्राथमिक विद्यालय',
+    COMPOSITE: 'कम्पोजिट विद्यालय',
+    KASTURBA_GANDHI: 'कस्तूरबा गांधी बालिका विद्यालय',
+    OTHER: 'अन्य',
+  },
+  en: {
+    PRIMARY: 'Primary school',
+    UPPER_PRIMARY: 'Upper primary school',
+    COMPOSITE: 'Composite school',
+    KASTURBA_GANDHI: 'Kasturba Gandhi Balika Vidyalaya',
+    OTHER: 'Other',
+  },
+};
+
+/**
+ * What each risk flag actually means, for the officer deciding whether to look.
+ *
+ * The API sends a prose sentence per flag as well; these short labels are for
+ * the list, where an officer scanning forty items needs to tell at a glance
+ * which one is a borrowed photograph and which is merely a Sunday.
+ */
+export const RISK_FLAG_LABELS: Record<'hi' | 'en', Record<RiskFlag, string>> = {
+  hi: {
+    PHOTO_REUSED_OTHER_SCHOOL: 'फ़ोटो किसी दूसरे विद्यालय में भी है',
+    PHOTO_REUSED_OWN_SCHOOL: 'फ़ोटो इसी विद्यालय में पहले भी लगी है',
+    COUNT_EXCEEDS_ROSTER: 'बताए गए बच्चे नामांकन से अधिक',
+    COUNT_EXCEEDS_CLASSES: 'बताए गए बच्चे इन कक्षाओं की संख्या से अधिक',
+    TEXT_REUSED: 'विवरण पहले के विवरण जैसा',
+    BURST: 'थोड़े समय में बहुत सारी प्रविष्टियाँ',
+    CONSENT_GAPS: 'कुछ बच्चों की सहमति नहीं है',
+    LONG_BACKDATED: 'घटना के बहुत बाद दर्ज',
+    NON_WORKING_DAY: 'अवकाश के दिन की गतिविधि',
+    NO_EVIDENCE: 'कोई फ़ोटो नहीं',
+    FIRST_SUBMISSION: 'विद्यालय की पहली प्रविष्टि',
+  },
+  en: {
+    PHOTO_REUSED_OTHER_SCHOOL: 'Photo also appears at another school',
+    PHOTO_REUSED_OWN_SCHOOL: 'Photo used before at this school',
+    COUNT_EXCEEDS_ROSTER: 'More children than are enrolled',
+    COUNT_EXCEEDS_CLASSES: 'More children than the named classes hold',
+    TEXT_REUSED: 'Write-up close to an earlier one',
+    BURST: 'Many entries in a short window',
+    CONSENT_GAPS: 'Some children have no consent',
+    LONG_BACKDATED: 'Filed long after the event',
+    NON_WORKING_DAY: 'Dated on a holiday',
+    NO_EVIDENCE: 'No photograph',
+    FIRST_SUBMISSION: "The school's first entry",
+  },
 };
 
 /**

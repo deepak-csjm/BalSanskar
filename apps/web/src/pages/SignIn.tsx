@@ -45,6 +45,9 @@ export function SignIn() {
         <p className="muted" style={{ textAlign: 'center' }}>
           {t('auth.noAccount')} <Link to="/register">{t('auth.registerLink')}</Link>
         </p>
+        <p className="muted" style={{ textAlign: 'center' }}>
+          {t('claim.link')} <Link to="/claim">{t('claim.title')}</Link>
+        </p>
         <p className="faint" style={{ textAlign: 'center' }}>
           <Link to="/showcase">{t('nav.showcase')}</Link>
         </p>

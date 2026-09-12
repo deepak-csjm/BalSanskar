@@ -18,6 +18,9 @@ import { Home } from './pages/Home.js';
  */
 
 const Register = lazy(() => import('./pages/Register.js').then((m) => ({ default: m.Register })));
+const ClaimSchool = lazy(() =>
+  import('./pages/ClaimSchool.js').then((m) => ({ default: m.ClaimSchool })),
+);
 const Showcase = lazy(() => import('./pages/Showcase.js').then((m) => ({ default: m.Showcase })));
 const Activities = lazy(() =>
   import('./pages/Activities.js').then((m) => ({ default: m.Activities })),
@@ -34,6 +37,10 @@ const ActivityDetail = lazy(() =>
 const Students = lazy(() => import('./pages/Students.js').then((m) => ({ default: m.Students })));
 const Reports = lazy(() => import('./pages/Reports.js').then((m) => ({ default: m.Reports })));
 const People = lazy(() => import('./pages/People.js').then((m) => ({ default: m.People })));
+const Claims = lazy(() => import('./pages/Claims.js').then((m) => ({ default: m.Claims })));
+const Clearance = lazy(() =>
+  import('./pages/Clearance.js').then((m) => ({ default: m.Clearance })),
+);
 
 export function App() {
   return (
@@ -45,6 +52,7 @@ export function App() {
               <Route path="/" element={<Navigate to="/app" replace />} />
               <Route path="/signin" element={<SignIn />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/claim" element={<ClaimSchool />} />
               <Route path="/showcase" element={<Showcase />} />
 
               <Route
@@ -63,6 +71,8 @@ export function App() {
                 <Route path="review" element={<ReviewQueue />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="people" element={<People />} />
+                <Route path="claims" element={<Claims />} />
+                <Route path="clearance" element={<Clearance />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

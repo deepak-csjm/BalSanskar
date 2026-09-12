@@ -6,6 +6,8 @@ import {
   canEditActivity,
   canTransitionActivity,
   evaluatePublishBlockers,
+  PUBLISH_BLOCKERS,
+  UNCONDITIONAL_PUBLISH_BLOCKERS,
   hasAtLeastRole,
   isWithinScope,
   maxApprovableVisibility,
@@ -236,6 +238,33 @@ describe('publish blockers', () => {
 
   it('passes a complete submission', () => {
     expect(evaluatePublishBlockers(clean, 'PUBLIC', 'DISTRICT_ADMIN', 'PUBLIC')).toEqual([]);
+  });
+
+  /**
+   * Exhaustive rather than by example. A new blocker added without a decision
+   * here fails this test rather than defaulting to the wrong side, and the
+   * wrong side is not symmetric: a blocker wrongly called unconditional greys
+   * out the head teacher's only legal action, while one wrongly called
+   * conditional lets the interface offer a publish the API will refuse.
+   */
+  it('classifies every blocker as either unconditional or a reason not to leave the school', () => {
+    const broken = {
+      status: 'DRAFT' as const,
+      hasMedia: true,
+      recognisedStudentConsents: ['REVOKED' as const],
+      mediaWithoutConsentCount: 2,
+      descriptionLength: 1,
+      clearance: 'NOT_REQUIRED' as const,
+    };
+    // Nothing about this submission is in order, yet publishing it as the
+    // school's own internal record fails only for reasons that hold anywhere.
+    const atSchool = evaluatePublishBlockers(broken, 'SCHOOL', 'PRINCIPAL', 'SCHOOL');
+    expect([...atSchool].sort()).toEqual([...UNCONDITIONAL_PUBLISH_BLOCKERS].sort());
+
+    for (const code of Object.values(PUBLISH_BLOCKERS)) {
+      const unconditional = UNCONDITIONAL_PUBLISH_BLOCKERS.includes(code);
+      expect(atSchool.includes(code)).toBe(unconditional);
+    }
   });
 
   it('blocks the open web when a child has no consent', () => {

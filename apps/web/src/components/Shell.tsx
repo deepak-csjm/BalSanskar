@@ -50,6 +50,12 @@ export function Shell() {
         {may('activity:moderate') ? (
           <Tab to="/app/review" icon="✅" label={t('nav.review')} />
         ) : null}
+        {may('activity:clear') ? (
+          <Tab to="/app/clearance" icon="🛡️" label={t('nav.clearance')} />
+        ) : null}
+        {may('school:verify_claim') ? (
+          <Tab to="/app/claims" icon="🏫" label={t('nav.claims')} />
+        ) : null}
         {may('report:read') ? <Tab to="/app/reports" icon="📊" label={t('nav.reports')} /> : null}
         {may('user:approve') ? <Tab to="/app/people" icon="👥" label={t('nav.people')} /> : null}
       </nav>

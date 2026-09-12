@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SCHOOL_TYPES } from '../enums.js';
+import { SCHOOL_TYPES, VISIBILITY_LEVELS } from '../enums.js';
 import {
   cleanText,
   idSchema,
@@ -140,7 +140,7 @@ export const riskFlagSchema = z.enum(RISK_FLAGS);
 
 export const clearanceSummarySchema = z.object({
   state: z.enum(CLEARANCE_STATES),
-  target: z.string().nullable(),
+  target: z.enum(VISIBILITY_LEVELS).nullable(),
   reason: z.enum(['FLAGGED', 'SAMPLED']).nullable(),
   riskScore: z.number().int(),
   riskFlags: z.array(riskFlagSchema),
@@ -166,7 +166,7 @@ export const clearanceQueueItemSchema = z.object({
   authorName: z.string(),
   attestedByName: z.string().nullable(),
   attestedAt: z.string().nullable(),
-  target: z.string(),
+  target: z.enum(VISIBILITY_LEVELS),
   riskScore: z.number().int(),
   riskFlags: z.array(riskFlagSchema),
   riskNotes: z.array(z.string()),

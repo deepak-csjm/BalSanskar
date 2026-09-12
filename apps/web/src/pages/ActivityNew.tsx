@@ -13,6 +13,7 @@ import { NetworkError, api, uploadToTicket } from '../api/client.js';
 import { useI18n } from '../i18n/index.js';
 import { useApi, type PagedResponse } from '../lib/useApi.js';
 import { compressImage, formatBytes } from '../lib/image.js';
+import { perceptualHash } from '../lib/phash.js';
 import { enqueueActivity } from '../offline/outbox.js';
 import { Card, ErrorNotice, Field, PageHeading } from '../components/ui.js';
 import { describe } from './SignIn.js';
@@ -44,7 +45,9 @@ export function ActivityNew() {
   });
   const [classLevels, setClassLevels] = useState<ClassLevel[]>([]);
   const [studentIds, setStudentIds] = useState<string[]>([]);
-  const [photos, setPhotos] = useState<Array<{ blob: Blob; url: string; name: string }>>([]);
+  const [photos, setPhotos] = useState<
+    Array<{ blob: Blob; url: string; name: string; hash: string | null }>
+  >([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -84,7 +87,11 @@ export function ActivityNew() {
         setError(`${file.name}: ${formatBytes(blob.size)} — too large even after compression.`);
         continue;
       }
-      accepted.push({ blob, url: URL.createObjectURL(blob), name: file.name });
+      // Fingerprinted here, before compression is forgotten and while the
+      // phone still holds the bytes — the server never sees them. A browser
+      // that cannot manage it returns null, which is not an error.
+      const hash = await perceptualHash(blob);
+      accepted.push({ blob, url: URL.createObjectURL(blob), name: file.name, hash });
     }
     setPhotos((current) => [...current, ...accepted]);
   };
@@ -111,6 +118,7 @@ export function ActivityNew() {
           contentType: photo.blob.type === 'image/png' ? 'image/png' : 'image/jpeg',
           sizeBytes: photo.blob.size,
           purpose: 'ACTIVITY_MEDIA',
+          ...(photo.hash ? { perceptualHash: photo.hash } : {}),
         });
         await uploadToTicket(ticket, photo.blob);
         mediaKeys.push(ticket.key);

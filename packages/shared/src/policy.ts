@@ -46,6 +46,25 @@ export const PUBLISH_BLOCKERS = {
 } as const;
 export type PublishBlocker = (typeof PUBLISH_BLOCKERS)[keyof typeof PUBLISH_BLOCKERS];
 
+/**
+ * The blockers that hold at every visibility, including the school's own record.
+ *
+ * Everything else on the list is a reason the work cannot leave the school, not
+ * a reason it cannot be recorded at all. The distinction is what lets a head
+ * teacher file a lesson with a consent gap as an internal record while the API
+ * still refuses to publish it to the open web.
+ *
+ * This exists because `evaluatePublishBlockers` is necessarily evaluated
+ * against one visibility, and the interface offers two. Without a way to tell
+ * the two kinds apart, a consent gap computed for a PUBLIC request would grey
+ * out the school-only button as well and leave the head teacher with no legal
+ * action and no explanation.
+ */
+export const UNCONDITIONAL_PUBLISH_BLOCKERS: readonly PublishBlocker[] = [
+  PUBLISH_BLOCKERS.NOT_SUBMITTED,
+  PUBLISH_BLOCKERS.DESCRIPTION_TOO_SHORT,
+];
+
 const MINIMUM_PUBLISHED_DESCRIPTION = 20;
 
 /**

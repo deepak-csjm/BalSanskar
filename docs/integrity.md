@@ -280,3 +280,45 @@ the work, and it makes systematic faking visible. That is a reasonable place for
 a system like this to sit. Claiming more would be dishonest, and would invite
 exactly the misplaced confidence that gets a platform like this into the
 newspapers.
+
+---
+
+## Where this lives in the interface
+
+The rules above are enforced by the API and are useless if a screen cannot
+express them. Four places in `apps/web` carry the design:
+
+| Screen                                          | Path                  | Who sees it                              |
+| ----------------------------------------------- | --------------------- | ---------------------------------------- |
+| `pages/ClaimSchool.tsx`                         | `/claim`              | Anyone. No account exists yet.           |
+| `pages/Claims.tsx`                              | `/app/claims`         | `school:verify_claim` — the block office |
+| `pages/Clearance.tsx`                           | `/app/clearance`      | `activity:clear` — the block office      |
+| `ModerationPanel` in `pages/ActivityDetail.tsx` | `/app/activities/:id` | `activity:moderate` — the head teacher   |
+
+Three decisions in those screens are load-bearing rather than cosmetic:
+
+**The moderation panel offers two buttons, not one button and a dropdown.**
+"Publish within the school" and "Attest and send on" are different acts with
+different consequences, and a dropdown makes them look like settings on one act.
+The attestation statement is rendered in full above the checkbox, in the head
+teacher's own language, because they are putting their name to those words.
+
+**The publish checklist is split by what each button actually needs.** The
+server evaluates blockers against one visibility — the one the teacher requested
+— while the screen offers two. `UNCONDITIONAL_PUBLISH_BLOCKERS` in
+`packages/shared/src/policy.ts` says which blockers hold everywhere. Getting
+this wrong in the apparently-safe direction is the harmful one: treating a
+consent gap computed for a PUBLIC request as a reason the school cannot keep its
+own internal record would grey out the head teacher's only legal action with no
+way to discover why.
+
+**A head teacher never sees the clearance queue.** Not hidden as a nicety — the
+`activity:clear` permission is deliberately absent from `PRINCIPAL_PERMISSIONS`,
+so the API refuses it too. If the tab ever appears for a head teacher, that is a
+permissions bug, not a navigation bug.
+
+The fingerprint is computed in the browser (`apps/web/src/lib/phash.ts`) because
+uploads go straight to storage and the API never receives the bytes. Its bit
+layout is therefore a wire format compared against fingerprints computed months
+earlier on other people's phones: `phash.test.ts` pins it, because a silent
+change there would stop every duplicate matching without failing anything else.
