@@ -112,6 +112,41 @@ services:
     ports:
       - '${API_PORT:-4000}:4000'
 
+  # Housekeeping that has to happen on a clock, in the same image as the API.
+  #
+  # Two jobs, one of which is a child-safety matter rather than tidiness: every
+  # activity form somebody starts and abandons leaves a photograph in the
+  # bucket, attached to nothing and shown in no interface where anyone would
+  # notice it. Without this it stays for the life of the deployment.
+  #
+  # A loop in a sidecar rather than a timer inside the API, because a timer
+  # inside the API runs once per replica and only while that process happens to
+  # be up. On Kubernetes this is a CronJob; on a plain host, a cron entry
+  # running `pnpm --filter @balsanskar/api maintenance:prod`. Both jobs are
+  # idempotent and only touch rows already past their deadline, so a run that
+  # overlaps the previous one is harmless.
+  maintenance:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: 'postgresql://${POSTGRES_USER:-balsanskar}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-balsanskar}?schema=public'
+      JWT_SECRET: '${JWT_SECRET:?set JWT_SECRET in .env}'
+      STORAGE_DRIVER: s3
+      S3_ENDPOINT: 'http://storage:9000'
+      S3_BUCKET: ${S3_BUCKET:-balsanskar}
+      S3_REGION: ${S3_REGION:-ap-south-1}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_FORCE_PATH_STYLE: 'true'
+    command: >
+      /bin/sh -c "while true; do node dist/maintenance.js || echo 'maintenance run failed'; sleep ${MAINTENANCE_INTERVAL_SECONDS:-3600}; done"
+
   web:
     build:
       context: .

@@ -22,7 +22,7 @@ Usage:
 It writes to the database it points at. Never run it against production.
 """
 
-import json, os, urllib.request, urllib.error
+import json, os, random, urllib.request, urllib.error
 
 BASE = os.environ.get("BALSANSKAR_URL", "http://127.0.0.1:4100").rstrip("/") + "/v1"
 # Whatever SEED_SUPER_ADMIN_PHONE / _PASSWORD were set to when the database was
@@ -30,6 +30,16 @@ BASE = os.environ.get("BALSANSKAR_URL", "http://127.0.0.1:4100").rstrip("/") + "
 # happened to have typed the same password.
 ADMIN_PHONE = os.environ.get("SEED_SUPER_ADMIN_PHONE", "9999900001")
 ADMIN_PASSWORD = os.environ.get("SEED_SUPER_ADMIN_PASSWORD", "ChangeThisPassword1")
+
+# Fresh numbers every run, so the script can be run twice against the same
+# database. With fixed fixtures the second run collides with the first one's
+# accounts and fails on a conflict that has nothing to do with the product.
+def _phone() -> str:
+    return f"9{random.randint(10**8, 10**9 - 1)}"
+
+
+OFFICER_PHONE, HEAD_PHONE = _phone(), _phone()
+TEACHER_PHONE, HELD_PHONE = _phone(), _phone()
 
 
 def call(method, path, body=None, token=None, expect=None):
@@ -71,7 +81,7 @@ ok("super admin signs in with a plain 10-digit number")
 _, districts = call("GET", "/districts", expect=200)
 shravasti = next(d for d in districts["items"] if d["code"] == "46")
 call("POST", "/users/invite", {
-    "phone": "9999900002", "fullName": "District Officer", "role": "DISTRICT_ADMIN",
+    "phone": OFFICER_PHONE, "fullName": "District Officer", "role": "DISTRICT_ADMIN",
     "districtId": shravasti["id"],
 }, token=admin, expect=201)
 ok("district officer invited")
@@ -79,28 +89,40 @@ ok("district officer invited")
 _, schools = call("GET", "/schools?limit=10", token=admin, expect=200)
 school = next(s for s in schools["items"] if s["udiseCode"] == "09460100101")
 call("POST", "/users/invite", {
-    "phone": "9999900003", "fullName": "Sunita Devi", "role": "PRINCIPAL", "schoolId": school["id"],
+    "phone": HEAD_PHONE, "fullName": "Sunita Devi", "role": "PRINCIPAL", "schoolId": school["id"],
 }, token=admin, expect=201)
 ok("head teacher invited")
 
-_, otp = call("POST", "/auth/otp/request", {"phone": "9999900004", "purpose": "REGISTRATION"}, expect=200)
-call("POST", "/auth/register", {
-    "phone": "9999900004", "code": otp["devCode"], "fullName": "Ram Prasad Verma",
-    "udiseCode": "09460100101",
-}, expect=201)
-_, otp2 = call("POST", "/auth/otp/request", {"phone": "9999900004", "purpose": "LOGIN"}, expect=200)
-call("POST", "/auth/otp/login", {"phone": "9999900004", "code": otp2["devCode"]}, expect=403)
-ok("teacher self-registers and is blocked until approved")
+def register_teacher(phone: str, name: str) -> None:
+    _, code = call("POST", "/auth/otp/request", {"phone": phone, "purpose": "REGISTRATION"}, expect=200)
+    call("POST", "/auth/register", {
+        "phone": phone, "code": code["devCode"], "fullName": name,
+        "udiseCode": "09460100101",
+    }, expect=201)
 
-_, otp3 = call("POST", "/auth/otp/request", {"phone": "9999900003"}, expect=200)
-_, hs = call("POST", "/auth/otp/login", {"phone": "9999900003", "code": otp3["devCode"]}, expect=200)
+
+# Two applicants rather than one, so that both halves of the rule can be shown
+# without waiting out a cooldown. A refused sign-in still consumes the code, and
+# a number may only be sent one code a minute for a given purpose — so proving
+# "blocked, then approved, then allowed" on a single account would mean sleeping
+# sixty seconds in the middle of a smoke test.
+register_teacher(TEACHER_PHONE, "Ram Prasad Verma")
+register_teacher(HELD_PHONE, "Held Applicant")
+
+_, held_code = call("POST", "/auth/otp/request", {"phone": HELD_PHONE, "purpose": "LOGIN"}, expect=200)
+call("POST", "/auth/otp/login", {"phone": HELD_PHONE, "code": held_code["devCode"]}, expect=403)
+ok("a teacher who self-registers is refused until somebody approves them")
+
+_, otp3 = call("POST", "/auth/otp/request", {"phone": HEAD_PHONE}, expect=200)
+_, hs = call("POST", "/auth/otp/login", {"phone": HEAD_PHONE, "code": otp3["devCode"]}, expect=200)
 head_token = hs["tokens"]["accessToken"]
 _, pending = call("GET", "/users?status=PENDING_APPROVAL", token=head_token, expect=200)
-call("POST", f"/users/{pending['items'][0]['id']}/approve", {}, token=head_token, expect=200)
-ok("head teacher approves the registration")
+approved = next(u for u in pending["items"] if u["phone"].endswith(TEACHER_PHONE[-10:]))
+call("POST", f"/users/{approved['id']}/approve", {}, token=head_token, expect=200)
+ok("head teacher approves one of them and leaves the other waiting")
 
-_, otp4 = call("POST", "/auth/otp/request", {"phone": "9999900004"}, expect=200)
-_, ts = call("POST", "/auth/otp/login", {"phone": "9999900004", "code": otp4["devCode"]}, expect=200)
+_, otp4 = call("POST", "/auth/otp/request", {"phone": TEACHER_PHONE, "purpose": "LOGIN"}, expect=200)
+_, ts = call("POST", "/auth/otp/login", {"phone": TEACHER_PHONE, "code": otp4["devCode"]}, expect=200)
 teacher = ts["tokens"]["accessToken"]
 ok("approved teacher signs in")
 
@@ -118,9 +140,32 @@ _, activity = call("POST", "/activities", {
 }, token=teacher, expect=201)
 call("POST", f"/activities/{activity['id']}/submit", {"requestedVisibility": "PUBLIC"}, token=teacher, expect=200)
 
-_, otp5 = call("POST", "/auth/otp/request", {"phone": "9999900002"}, expect=200)
-_, osess = call("POST", "/auth/otp/login", {"phone": "9999900002", "code": otp5["devCode"]}, expect=200)
+_, otp5 = call("POST", "/auth/otp/request", {"phone": OFFICER_PHONE}, expect=200)
+_, osess = call("POST", "/auth/otp/login", {"phone": OFFICER_PHONE, "code": otp5["devCode"]}, expect=200)
 officer_token = osess["tokens"]["accessToken"]
+
+_, baseline = call("GET", "/reports/overview", token=officer_token, expect=200)
+
+# The gate out of the school, in the order a real school walks it. See
+# docs/integrity.md: the head teacher attests, the block clears, and only then
+# can anyone raise it to the open web.
+status, err = call("POST", f"/activities/{activity['id']}/moderate",
+                   {"decision": "PUBLISH", "visibility": "DISTRICT"}, token=head_token)
+assert status == 409 and "attestation" in err["error"]["message"].lower(), err
+ok("work cannot leave the school without the head teacher's attestation")
+
+call("POST", f"/activities/{activity['id']}/moderate", {
+    "decision": "PUBLISH", "visibility": "DISTRICT",
+    "attestation": {"confirmed": True},
+}, token=head_token, expect=200)
+_, gated = call("GET", f"/activities/{activity['id']}", token=head_token, expect=200)
+assert gated["visibility"] == "SCHOOL", gated["visibility"]
+assert gated["clearance"] == "AWAITING_BLOCK", gated["clearance"]
+ok("attested work waits at school visibility until the block has looked at it")
+
+call("POST", f"/activities/{activity['id']}/clearance",
+     {"decision": "CLEAR"}, token=officer_token, expect=200)
+ok("the block officer clears it")
 
 status, err = call("POST", f"/activities/{activity['id']}/moderate",
                    {"decision": "PUBLISH", "visibility": "PUBLIC"}, token=officer_token)
@@ -137,7 +182,7 @@ ok("public publish succeeds once consent is on file")
 _, pub = call("GET", f"/public/activities/{activity['id']}", expect=200)
 raw = json.dumps(pub, ensure_ascii=False)
 assert "Anjali" in raw and "Kumari" not in raw, raw
-assert "Ram Kumar" not in raw and "9999900004" not in raw, raw
+assert "Ram Kumar" not in raw and TEACHER_PHONE not in raw, raw
 ok("showcase shows the given name, never the surname, guardian or phone")
 
 _, rev = call("POST", f"/students/{student['id']}/consent/revoke",
@@ -147,8 +192,12 @@ call("GET", f"/public/activities/{activity['id']}", expect=404)
 ok("withdrawing consent pulls it off the open web immediately")
 
 _, report = call("GET", "/reports/overview", token=officer_token, expect=200)
-assert report["totals"]["publishedActivities"] == 1, report["totals"]
-ok(f"district report: {report['totals']['publishedActivities']} published, "
+# A delta rather than an absolute. The script is meant to be runnable against a
+# database that already has work in it — asserting a total means it only ever
+# passes on the first run, which is the same as not asserting anything.
+published = report["totals"]["publishedActivities"] - baseline["totals"]["publishedActivities"]
+assert published == 1, f"expected this run to add one published activity, added {published}"
+ok(f"district report: {report['totals']['publishedActivities']} published in all, "
    f"{report['participationRate']['schools']:.0%} of schools active")
 
 status, _ = call("GET", "/reports/overview?districtId=" + districts["items"][0]["id"], token=officer_token)

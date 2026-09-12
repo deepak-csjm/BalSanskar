@@ -1,12 +1,12 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import {
+  PHASH_MATCH_DISTANCE,
   ATTESTATION_TEXT,
   SAMPLE_RATE,
   TEXT_REUSE_THRESHOLD,
   computeTrustTier,
   isLongBackdated,
   isNonWorkingDay,
-  looksLikeSameImage,
   needsClearance,
   requiresBlockReview,
   reviewReason,
@@ -67,6 +67,74 @@ const activityForRisk = {
 
 type ActivityForRisk = Prisma.ActivityGetPayload<{ include: typeof activityForRisk }>;
 
+interface PhotoMatch {
+  id: string;
+  schoolId: string | null;
+  createdAt: Date;
+}
+
+/**
+ * Every photograph already on the platform within matching distance of one of
+ * these, oldest first.
+ *
+ * The comparison happens in PostgreSQL rather than in this process, for a
+ * reason that is about correctness before it is about speed. Reading a capped
+ * page of rows and comparing them here means the cap decides what gets
+ * examined — and with no total order, an arbitrary page. At the scale this
+ * platform is built for that page is a rounding error against the table, so the
+ * check would go on reporting "no duplicates" while looking at almost nothing.
+ * A control that silently stops working is worse than one that was never built,
+ * because the officer has stopped watching for the thing it claims to catch.
+ *
+ * `bit_count(a # b)` is the Hamming distance between two bit strings and needs
+ * no extension. The scan is sequential — no stock index can accelerate an
+ * arbitrary Hamming distance — but it is a sequential scan of a narrow
+ * generated column inside the database, which is a different order of cost from
+ * pulling the rows across a socket.
+ *
+ * The threshold travels from `PHASH_MATCH_DISTANCE` rather than being written
+ * into the SQL, so the browser, the shared unit tests and this query cannot
+ * disagree about what counts as the same photograph.
+ */
+async function findMatchingPhotographs(
+  db: PrismaClient | Prisma.TransactionClient,
+  hashes: string[],
+  excludeAssetIds: string[],
+  schoolId: string,
+): Promise<PhotoMatch[]> {
+  // A fingerprint reaches this point from an untrusted browser. It is a bound
+  // parameter below, but it is also cast to `bit(64)`, and a value that is not
+  // sixteen hexadecimal characters raises a database error rather than
+  // returning nothing — so it is checked here where the message can be useful.
+  if (hashes.some((hash) => !/^[0-9a-f]{16}$/.test(hash))) {
+    throw badRequest('A photograph fingerprint was not sixteen hexadecimal characters');
+  }
+
+  // Asks for the two rows the caller actually needs — the earliest match at
+  // this school and the earliest anywhere else — rather than a page of
+  // candidates to sort through here. Returning them whole would mean choosing a
+  // limit, and any limit reintroduces the problem: with a thousand matches at
+  // one school, a cap could hide the single match at another, which is the more
+  // serious of the two findings.
+  return db.$queryRaw<PhotoMatch[]>`
+    WITH matches AS (
+      SELECT DISTINCT ON (m."id") m."id", m."schoolId", m."createdAt"
+      FROM "media_assets" m
+      JOIN unnest(${hashes}::text[]) AS probe(h)
+        ON bit_count(m."perceptualBits" # ('x' || probe.h)::bit(64)) <= ${PHASH_MATCH_DISTANCE}
+      WHERE m."perceptualBits" IS NOT NULL
+        AND m."attachedAt" IS NOT NULL
+        AND NOT (m."id" = ANY(${excludeAssetIds}::text[]))
+      ORDER BY m."id"
+    )
+    (SELECT * FROM matches WHERE "schoolId" IS NOT DISTINCT FROM ${schoolId}
+       ORDER BY "createdAt" ASC LIMIT 1)
+    UNION ALL
+    (SELECT * FROM matches WHERE "schoolId" IS DISTINCT FROM ${schoolId}
+       ORDER BY "createdAt" ASC LIMIT 1)
+  `;
+}
+
 /**
  * Everything about this activity a human might want to look at before it leaves
  * the school.
@@ -94,25 +162,17 @@ export async function assessRisk(
   }
 
   if (hashes.length > 0) {
-    // The whole table is candidate; the partial index on perceptualHash keeps
-    // this a scan of the hashed rows rather than of every asset ever uploaded.
-    const others = await db.mediaAsset.findMany({
-      where: {
-        perceptualHash: { not: null },
-        attachedAt: { not: null },
-        NOT: { id: { in: activity.media.map((item) => item.assetId) } },
-      },
-      select: { id: true, perceptualHash: true, schoolId: true, createdAt: true },
-      take: 5000,
-    });
+    const others = await findMatchingPhotographs(
+      db,
+      hashes,
+      activity.media.map((item) => item.assetId),
+      activity.schoolId,
+    );
 
-    let sameSchool: (typeof others)[number] | null = null;
-    let otherSchool: (typeof others)[number] | null = null;
+    let sameSchool: PhotoMatch | null = null;
+    let otherSchool: PhotoMatch | null = null;
 
     for (const candidate of others) {
-      if (!candidate.perceptualHash) continue;
-      const matched = hashes.some((hash) => looksLikeSameImage(hash, candidate.perceptualHash!));
-      if (!matched) continue;
       if (candidate.schoolId === activity.schoolId) {
         sameSchool ??= candidate;
       } else {
@@ -356,7 +416,9 @@ export async function listClearanceQueue(
         riskFlags: flags,
         // Recomputed for display rather than stored: the notes carry dates and
         // counts that read better fresh, and storing prose invites it going stale.
-        riskNotes: flags.map(flagSentence),
+        // Rows escalated before the notes were stored fall back to the
+        // generic sentence, which is all they ever had.
+        riskNotes: row.riskNotes.length > 0 ? row.riskNotes : flags.map(flagSentence),
         reason: reviewReason(flags),
         coverUrl: cover ? await storage.getSignedReadUrl(cover.asset.storageKey) : null,
         submittedAt: row.submittedAt?.toISOString() ?? null,

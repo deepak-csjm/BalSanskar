@@ -1,0 +1,17 @@
+-- Keep the sentences the risk assessment actually wrote.
+--
+-- Only the flags were stored, so the queue regenerated one fixed sentence per
+-- flag and every specific the assessment had worked out was discarded on the
+-- way to the database: the date a photograph was first used, how many children
+-- over the roster a count was, which earlier write-up a description echoes.
+--
+-- The difference matters at the only moment this feature exists for. "A
+-- photograph here has already been used by another school" sends an officer
+-- hunting through a district. "...already used by another school (uploaded
+-- 2026-01-02)" is a decision. The whole design of this queue is that an
+-- officer's attention is scarce, and a flag they cannot act on quickly is a
+-- flag they will learn to skip.
+--
+-- Rows written before this keep an empty array and fall back to the generic
+-- sentence, which is what they had anyway.
+ALTER TABLE "activities" ADD COLUMN "riskNotes" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

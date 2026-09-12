@@ -106,6 +106,21 @@ Two limits will interrupt you before they interrupt a real user, and both are
 working as intended: one code per number per minute, and eight per number per
 hour.
 
+### Housekeeping
+
+Two jobs run on a clock, and one of them matters for child safety: every
+activity form a teacher starts and abandons leaves a photograph in the bucket,
+attached to nothing and visible in no interface. `docker compose up` runs them
+hourly in a `maintenance` container. Anywhere else, schedule:
+
+```bash
+pnpm --filter @balsanskar/api maintenance        # from source
+node apps/api/dist/maintenance.js                # from a build
+```
+
+Both jobs are idempotent and only touch rows already past their deadline, so a
+run overlapping the previous one is harmless.
+
 ### Checks
 
 ```bash

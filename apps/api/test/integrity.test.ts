@@ -13,6 +13,8 @@ import {
   type Geography,
   type TestUser,
 } from './helpers.js';
+import { expireStaleClaims } from '../src/modules/org/claim.service.js';
+import { sweepOrphanedUploads } from '../src/modules/activity/media.service.js';
 
 /**
  * Getting on the platform, and earning the right to leave the school.
@@ -119,6 +121,36 @@ describe('school onboarding and the escalation gate', () => {
       // ...and not a directory of who works where.
       expect(body.existingClaimantHint).not.toContain('Devi');
       expect(second.body).not.toContain('+9198123');
+    });
+
+    it('lets a school be claimed again once an abandoned claim has expired', async () => {
+      // The failure this prevents is permanent and silent. One claim nobody
+      // follows up — a wrong number, a typo, someone who thought better of it —
+      // and the school is locked out of the platform for good, because no
+      // journey in the product can clear it and the next head teacher is shown
+      // only the given name of a stranger.
+      await raiseClaim();
+      await prisma().schoolClaim.updateMany({
+        where: { udiseCode: '10000000055' },
+        data: { expiresAt: new Date(Date.now() - 86_400_000) },
+      });
+
+      const second = await raiseClaim({ phone: '+919812300013', claimantName: 'Radha Yadav' });
+      expect(second.statusCode).toBe(201);
+      expect((second.json() as { status: string }).status).toBe('PENDING');
+    });
+
+    it('still refuses a second claim while the first is live', async () => {
+      // The other half of the same rule: expiry must not be a way round the
+      // collision check for anyone willing to wait less than thirty days.
+      await raiseClaim();
+      await prisma().schoolClaim.updateMany({
+        where: { udiseCode: '10000000055' },
+        data: { expiresAt: new Date(Date.now() + 86_400_000) },
+      });
+
+      const second = await raiseClaim({ phone: '+919812300014', claimantName: 'Radha Yadav' });
+      expect((second.json() as { status: string }).status).toBe('ALREADY_CLAIMED');
     });
 
     it('creates the school and appoints the head teacher when the block verifies it', async () => {
@@ -680,6 +712,125 @@ describe('school onboarding and the escalation gate', () => {
       expect(activity.riskScore).toBeGreaterThanOrEqual(50);
     });
 
+    it('finds a reused photograph however much has been uploaded since', async () => {
+      /**
+       * The regression this guards is the one that would never have been
+       * noticed. The check used to read a capped page of rows and compare them
+       * in the application — with no total order, so an arbitrary page. Past
+       * the cap it examined a lottery, and at the scale this platform is for it
+       * would have gone on reporting "no duplicates" while looking at a
+       * rounding error of the table. An officer who trusts a control that has
+       * quietly stopped working is worse off than one who never had it.
+       *
+       * Six thousand rows is past the old five-thousand cap and cheap to
+       * insert; the reused photograph is buried at the far end of it.
+       */
+      const hash = 'a1b2c3d4e5f60718';
+      const otherTeacher = await createUser(app, {
+        role: 'TEACHER',
+        schoolId: geo.schoolA2,
+        blockId: geo.blockA2,
+        districtId: geo.districtA,
+      });
+
+      await prisma().mediaAsset.create({
+        data: {
+          storageKey: 'activity/other/2026/07/needle.jpg',
+          kind: 'IMAGE',
+          contentType: 'image/jpeg',
+          sizeBytes: 1000,
+          uploadedById: otherTeacher.id,
+          schoolId: geo.schoolA2,
+          perceptualHash: hash,
+          attachedAt: new Date(),
+        },
+      });
+
+      // Unrelated photographs, all far outside matching distance of the needle.
+      await prisma().mediaAsset.createMany({
+        data: Array.from({ length: 6000 }, (_, index) => ({
+          storageKey: `activity/other/2026/07/hay-${index}.jpg`,
+          kind: 'IMAGE' as const,
+          contentType: 'image/jpeg',
+          sizeBytes: 1000,
+          uploadedById: otherTeacher.id,
+          schoolId: geo.schoolA2,
+          // Walks the top 32 bits, leaving every one of these at least 20 bits
+          // from the needle and from each other's neighbourhood.
+          perceptualHash: (0x0f0f0f0f00000000n + BigInt(index)).toString(16).padStart(16, '0'),
+          attachedAt: new Date(),
+        })),
+      });
+
+      const ticket = await app.inject({
+        method: 'POST',
+        url: '/v1/uploads',
+        headers: auth(teacher),
+        payload: {
+          fileName: 'classroom.jpg',
+          contentType: 'image/jpeg',
+          sizeBytes: 2048,
+          perceptualHash: hash,
+        },
+      });
+      const key = (ticket.json() as { key: string }).key;
+
+      const activity = await escalate({ mediaKeys: [key] });
+      expect(activity.riskFlags).toContain('PHOTO_REUSED_OTHER_SCHOOL');
+    });
+
+    it('reports the earliest reuse, not whichever row came back first', async () => {
+      // The note tells the officer when the photograph was first used, so it
+      // has to be the first one and not an arbitrary pick among many.
+      const hash = 'c0ffee00c0ffee00';
+      const otherTeacher = await createUser(app, {
+        role: 'TEACHER',
+        schoolId: geo.schoolA2,
+        blockId: geo.blockA2,
+        districtId: geo.districtA,
+      });
+      for (const [index, day] of ['2026-03-04', '2026-01-02', '2026-05-06'].entries()) {
+        await prisma().mediaAsset.create({
+          data: {
+            storageKey: `activity/other/2026/copy-${index}.jpg`,
+            kind: 'IMAGE',
+            contentType: 'image/jpeg',
+            sizeBytes: 1000,
+            uploadedById: otherTeacher.id,
+            schoolId: geo.schoolA2,
+            perceptualHash: hash,
+            attachedAt: new Date(`${day}T00:00:00Z`),
+            createdAt: new Date(`${day}T00:00:00Z`),
+          },
+        });
+      }
+
+      const ticket = await app.inject({
+        method: 'POST',
+        url: '/v1/uploads',
+        headers: auth(teacher),
+        payload: {
+          fileName: 'classroom.jpg',
+          contentType: 'image/jpeg',
+          sizeBytes: 2048,
+          perceptualHash: hash,
+        },
+      });
+      const activity = await escalate({ mediaKeys: [(ticket.json() as { key: string }).key] });
+      const note = activity.riskFlags.includes('PHOTO_REUSED_OTHER_SCHOOL');
+      expect(note).toBe(true);
+
+      const queue = await app.inject({
+        method: 'GET',
+        url: '/v1/clearance-queue',
+        headers: auth(blockOfficer),
+      });
+      const item = (
+        queue.json() as { items: { activityId: string; riskNotes: string[] }[] }
+      ).items.find((row) => row.activityId === activity.id);
+      expect(item?.riskNotes.join(' ')).toContain('2026-01-02');
+    });
+
     it('never auto-clears a flagged activity, whatever the school’s standing', async () => {
       // A school with a long clean record would normally be sampled at 10%.
       await prisma().school.update({
@@ -751,6 +902,113 @@ describe('school onboarding and the escalation gate', () => {
         headers: auth(head),
       });
       expect(response.statusCode).toBe(403);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Housekeeping
+  // -------------------------------------------------------------------------
+
+  describe('the maintenance sweep', () => {
+    it('deletes a photograph that was uploaded and then abandoned', async () => {
+      /**
+       * The one job here that is a child-safety matter rather than tidiness.
+       * Every form someone starts and does not finish leaves an image in the
+       * bucket, attached to nothing and visible in no interface that would let
+       * anyone notice it is there. Without the sweep, a photograph of a child
+       * taken for an activity that was never submitted stays for the life of
+       * the deployment.
+       */
+      const orphan = await prisma().mediaAsset.create({
+        data: {
+          storageKey: 'activity/abandoned/2026/01/orphan.jpg',
+          kind: 'IMAGE',
+          contentType: 'image/jpeg',
+          sizeBytes: 1000,
+          uploadedById: teacher.id,
+          schoolId: geo.schoolA1,
+          attachedAt: null,
+          createdAt: new Date(Date.now() - 48 * 3_600_000),
+        },
+      });
+      const recent = await prisma().mediaAsset.create({
+        data: {
+          storageKey: 'activity/inflight/2026/01/recent.jpg',
+          kind: 'IMAGE',
+          contentType: 'image/jpeg',
+          sizeBytes: 1000,
+          uploadedById: teacher.id,
+          schoolId: geo.schoolA1,
+          attachedAt: null,
+        },
+      });
+
+      const result = await sweepOrphanedUploads(prisma());
+      expect(result.deleted).toBeGreaterThanOrEqual(1);
+
+      expect(await prisma().mediaAsset.findUnique({ where: { id: orphan.id } })).toBeNull();
+      // Someone may still be filling in the form this belongs to.
+      expect(await prisma().mediaAsset.findUnique({ where: { id: recent.id } })).not.toBeNull();
+    });
+
+    it('leaves an attached photograph alone however old it is', async () => {
+      const attached = await prisma().mediaAsset.create({
+        data: {
+          storageKey: 'activity/kept/2020/01/attached.jpg',
+          kind: 'IMAGE',
+          contentType: 'image/jpeg',
+          sizeBytes: 1000,
+          uploadedById: teacher.id,
+          schoolId: geo.schoolA1,
+          attachedAt: new Date('2020-01-01T00:00:00Z'),
+          createdAt: new Date('2020-01-01T00:00:00Z'),
+        },
+      });
+      await sweepOrphanedUploads(prisma());
+      expect(await prisma().mediaAsset.findUnique({ where: { id: attached.id } })).not.toBeNull();
+    });
+
+    it('takes an unanswered claim out of the officer’s queue', async () => {
+      const otp = await app.inject({
+        method: 'POST',
+        url: '/v1/auth/otp/request',
+        payload: { phone: '+919812300077', purpose: 'REGISTRATION' },
+      });
+      await app.inject({
+        method: 'POST',
+        url: '/v1/school-claims',
+        payload: {
+          phone: '+919812300077',
+          code: (otp.json() as { devCode: string }).devCode,
+          udiseCode: '10000000099',
+          blockId: geo.blockA1,
+          proposedNameHi: 'प्राथमिक विद्यालय पुराना',
+          claimantName: 'Forgotten Claimant',
+        },
+      });
+      await prisma().schoolClaim.updateMany({
+        where: { udiseCode: '10000000099' },
+        data: { expiresAt: new Date(Date.now() - 86_400_000) },
+      });
+
+      expect((await expireStaleClaims(prisma())).expired).toBe(1);
+
+      const queue = await app.inject({
+        method: 'GET',
+        url: '/v1/school-claims?status=PENDING',
+        headers: auth(blockOfficer),
+      });
+      const items = (queue.json() as { items: { udiseCode: string }[] }).items;
+      expect(items.map((item) => item.udiseCode)).not.toContain('10000000099');
+    });
+
+    it('is safe to run twice', async () => {
+      // It runs on a clock, and a clock fires while the last run is still
+      // going often enough to matter.
+      await expireStaleClaims(prisma());
+      await sweepOrphanedUploads(prisma());
+      await expect(expireStaleClaims(prisma())).resolves.toEqual({ expired: 0 });
+      await expect(sweepOrphanedUploads(prisma())).resolves.toEqual({ deleted: 0 });
     });
   });
 });

@@ -587,6 +587,7 @@ export async function moderateActivity(
     let clearanceTarget = existing.clearanceTarget;
     let riskScore = existing.riskScore;
     let riskFlags = existing.riskFlags;
+    let riskNotes = existing.riskNotes;
 
     if (!escalating) {
       clearance = 'NOT_REQUIRED';
@@ -601,6 +602,7 @@ export async function moderateActivity(
       clearanceTarget = visibility;
       riskScore = outcome.assessment.score;
       riskFlags = outcome.assessment.flags;
+      riskNotes = outcome.assessment.notes;
       grantedVisibility = outcome.clearance === 'AUTO_CLEARED' ? visibility : 'SCHOOL';
 
       if (outcome.tier !== existing.school.trustTier) {
@@ -624,6 +626,7 @@ export async function moderateActivity(
         clearanceTarget,
         riskScore,
         riskFlags,
+        riskNotes,
         ...(attestingNow && !existing.attestedById
           ? {
               attestedById: actor.id,

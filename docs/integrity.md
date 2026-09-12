@@ -204,6 +204,25 @@ images, which is the point, and it will occasionally match two genuinely
 different photographs of the same classroom wall. So it **flags for a human**;
 it never rejects on its own.
 
+**The comparison happens in PostgreSQL, and this is a correctness decision
+before it is a performance one.** `bit_count(a # b)` gives the Hamming distance
+between two bit strings with no extension required, against a `bit(64)` column
+generated from the hex so the two representations cannot drift.
+
+The first implementation read a capped page of rows and compared them in the
+application. That is wrong in a way that would never have produced a bug report:
+an unordered `LIMIT` returns an arbitrary page, so past the cap the check
+examined a lottery rather than the record — and at 130,000 schools that page is
+a rounding error against the table. The flag would have gone on reporting "no
+duplicates" while detecting essentially nothing, and an officer who trusts a
+control that has quietly stopped working is worse off than one who never had it.
+`integrity.test.ts` buries a reused photograph behind six thousand unrelated
+ones for exactly this reason.
+
+The scan is sequential, because no stock index can accelerate an arbitrary
+Hamming distance. If it ever becomes the bottleneck the answer is a band index
+or a `bktree` extension, not a smaller cap.
+
 ### 3. Sanity against the school's own records
 
 Cheap checks that catch carelessness and inflation:
@@ -316,6 +335,32 @@ way to discover why.
 `activity:clear` permission is deliberately absent from `PRINCIPAL_PERMISSIONS`,
 so the API refuses it too. If the tab ever appears for a head teacher, that is a
 permissions bug, not a navigation bug.
+
+## Housekeeping that has to happen on a clock
+
+Two jobs run from `apps/api/src/maintenance.ts`, hourly, as a separate process:
+
+**Abandoned uploads are deleted.** This one is a child-safety matter rather than
+tidiness. Every activity form somebody starts and does not finish leaves a
+photograph in the bucket, attached to nothing and shown in no interface where
+anybody would notice it was there. Without the sweep it stays for the life of
+the deployment. Files attached to a record are never touched, and a file
+uploaded in the last day is left alone because the teacher may still be typing.
+
+**Unanswered claims are expired**, so the block officer's queue does not fill
+with claims nobody can usefully act on any more.
+
+Neither is a timer inside the API process: a timer runs once per replica, only
+while that process happens to be up, and cannot be invoked by an operator who
+needs it to have run now. A command that exits with a status is something a cron
+table, a systemd timer or a Kubernetes CronJob can own.
+
+The claim expiry is deliberately **not** load-bearing. A partial unique index
+allows one live claim per UDISE code, so a claim left `PENDING` for ever would
+lock that school out of the platform permanently — no journey in the product can
+clear it, and the next head teacher to try sees only a stranger's given name.
+`createSchoolClaim` therefore retires a stale claim on the way past. A school
+must not stay locked out because somebody forgot a cron entry.
 
 The fingerprint is computed in the browser (`apps/web/src/lib/phash.ts`) because
 uploads go straight to storage and the API never receives the bytes. Its bit

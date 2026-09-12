@@ -102,8 +102,31 @@ export async function createSchoolClaim(
     );
   }
 
+  /**
+   * Retire an abandoned claim on this code before looking at what blocks it.
+   *
+   * The failure this prevents is permanent and silent. One claim nobody follows
+   * up — a wrong number, a typo, someone who thought better of it — and the
+   * school is locked out of the platform for good: no journey in the product
+   * can clear it, and the next head teacher is shown nothing but the given name
+   * of a stranger. A partial unique index enforces one live claim per code, so
+   * without this the row keeps its slot for ever.
+   *
+   * Done here, on the way past, rather than left to `expireStaleClaims`. That
+   * sweep keeps the officer's queue honest, but a school must not stay locked
+   * out because somebody forgot to schedule a cron entry.
+   */
+  await prisma.schoolClaim.updateMany({
+    where: { udiseCode: input.udiseCode, status: 'PENDING', expiresAt: { lt: new Date() } },
+    data: { status: 'EXPIRED' },
+  });
+
   const pending = await prisma.schoolClaim.findFirst({
-    where: { udiseCode: input.udiseCode, status: 'PENDING' },
+    where: {
+      udiseCode: input.udiseCode,
+      status: 'PENDING',
+      expiresAt: { gt: new Date() },
+    },
     select: { claimantName: true, claimantDesignation: true, expiresAt: true },
   });
   if (pending) {
