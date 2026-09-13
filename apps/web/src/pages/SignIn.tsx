@@ -48,6 +48,12 @@ export function SignIn() {
         <p className="muted" style={{ textAlign: 'center' }}>
           {t('claim.link')} <Link to="/claim">{t('claim.title')}</Link>
         </p>
+        {/* Placed before the showcase, and phrased as a promise rather than a
+            policy, because the question a teacher actually has at this screen is
+            not "what does it do" but "what will it do to me". */}
+        <p className="muted" style={{ textAlign: 'center' }}>
+          <Link to="/vachan">{t('promise.title')}</Link>
+        </p>
         <p className="faint" style={{ textAlign: 'center' }}>
           <Link to="/showcase">{t('nav.showcase')}</Link>
         </p>

@@ -4,6 +4,7 @@ export * from './rbac.js';
 export * from './policy.js';
 export * from './integrity.js';
 export * from './schemes.js';
+export * from './guarantees.js';
 export * from './retention.js';
 export * from './contracts/common.js';
 export * from './contracts/auth.js';

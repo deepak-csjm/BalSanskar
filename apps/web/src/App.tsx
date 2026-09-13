@@ -25,6 +25,7 @@ const VillageSchool = lazy(() =>
   import('./pages/VillageSchool.js').then((m) => ({ default: m.VillageSchool })),
 );
 const Showcase = lazy(() => import('./pages/Showcase.js').then((m) => ({ default: m.Showcase })));
+const Promises = lazy(() => import('./pages/Promises.js').then((m) => ({ default: m.Promises })));
 const Activities = lazy(() =>
   import('./pages/Activities.js').then((m) => ({ default: m.Activities })),
 );
@@ -62,6 +63,9 @@ export function App() {
                   because that is already painted on the building. */}
               <Route path="/vidyalaya/:udiseCode" element={<VillageSchool />} />
               <Route path="/showcase" element={<Showcase />} />
+              {/* What this platform will never do. Public and unauthenticated,
+                  because the teacher who most needs it has not signed up yet. */}
+              <Route path="/vachan" element={<Promises />} />
 
               <Route
                 path="/app"

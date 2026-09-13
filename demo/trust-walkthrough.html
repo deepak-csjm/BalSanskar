@@ -735,7 +735,6 @@
   }
 </style>
 
-
 <style>
   /* Additions for the two tracks and the block officer's queue. */
 
@@ -1535,14 +1534,32 @@
   var TRACKS = {
     join: {
       hi: [
-        { id: 'claimRaised', text: 'नए प्रधानाध्यापक बनकर अपने विद्यालय का UDISE कोड डालिए और दावा भेजिए।' },
-        { id: 'claimBlocked', text: 'वापस उसी भूमिका में देखिए — पुष्टि होने तक कुछ भी दर्ज नहीं हो सकता।' },
-        { id: 'claimVerified', text: 'खंड शिक्षा अधिकारी बनकर दावे की पुष्टि कीजिए। तभी विद्यालय बनता है।' },
+        {
+          id: 'claimRaised',
+          text: 'नए प्रधानाध्यापक बनकर अपने विद्यालय का UDISE कोड डालिए और दावा भेजिए।',
+        },
+        {
+          id: 'claimBlocked',
+          text: 'वापस उसी भूमिका में देखिए — पुष्टि होने तक कुछ भी दर्ज नहीं हो सकता।',
+        },
+        {
+          id: 'claimVerified',
+          text: 'खंड शिक्षा अधिकारी बनकर दावे की पुष्टि कीजिए। तभी विद्यालय बनता है।',
+        },
       ],
       en: [
-        { id: 'claimRaised', text: "As the new head teacher, enter your school's UDISE code and send the claim." },
-        { id: 'claimBlocked', text: 'Look again in that role — nothing can be recorded until it is confirmed.' },
-        { id: 'claimVerified', text: 'As the block officer, verify the claim. Only then does the school exist.' },
+        {
+          id: 'claimRaised',
+          text: "As the new head teacher, enter your school's UDISE code and send the claim.",
+        },
+        {
+          id: 'claimBlocked',
+          text: 'Look again in that role — nothing can be recorded until it is confirmed.',
+        },
+        {
+          id: 'claimVerified',
+          text: 'As the block officer, verify the claim. Only then does the school exist.',
+        },
       ],
     },
     out: {
@@ -1552,18 +1569,33 @@
         { id: 'attested', text: 'प्रमाणन पढ़कर पुष्टि कीजिए और खंड स्तर पर भेजिए।' },
         { id: 'stillSchool', text: 'ध्यान दीजिए — काम अभी भी सिर्फ़ विद्यालय तक दिख रहा है।' },
         { id: 'blockCleared', text: 'खंड अधिकारी बनकर जाँच सूची देखिए और स्वीकृत कीजिए।' },
-        { id: 'publicBlocked', text: 'जनपद अधिकारी बनकर सार्वजनिक करने की कोशिश कीजिए — सहमति के बिना रुकेगा।' },
+        {
+          id: 'publicBlocked',
+          text: 'जनपद अधिकारी बनकर सार्वजनिक करने की कोशिश कीजिए — सहमति के बिना रुकेगा।',
+        },
         { id: 'consentGiven', text: 'शिक्षक बनकर अंजलि के अभिभावक की सहमति दर्ज कीजिए।' },
-        { id: 'published', text: 'अब जनपद अधिकारी बनकर सार्वजनिक कीजिए। प्रदर्शनी में सिर्फ़ पहला नाम दिखेगा।' },
+        {
+          id: 'published',
+          text: 'अब जनपद अधिकारी बनकर सार्वजनिक कीजिए। प्रदर्शनी में सिर्फ़ पहला नाम दिखेगा।',
+        },
         { id: 'withdrawn', text: 'सहमति वापस लीजिए। फ़ोटो उसी क्षण प्रदर्शनी से हट जाएगी।' },
       ],
       en: [
-        { id: 'submitted', text: 'As the teacher, send the reading-corner activity to the head teacher.' },
+        {
+          id: 'submitted',
+          text: 'As the teacher, send the reading-corner activity to the head teacher.',
+        },
         { id: 'attestNeeded', text: 'As the head teacher, try to send it on without attesting.' },
         { id: 'attested', text: 'Read the attestation, confirm it, and send it to block level.' },
         { id: 'stillSchool', text: 'Notice it is still visible only inside the school.' },
-        { id: 'blockCleared', text: 'As the block officer, open the clearance queue and clear it.' },
-        { id: 'publicBlocked', text: 'As the district officer, try to make it public — consent will stop you.' },
+        {
+          id: 'blockCleared',
+          text: 'As the block officer, open the clearance queue and clear it.',
+        },
+        {
+          id: 'publicBlocked',
+          text: 'As the district officer, try to make it public — consent will stop you.',
+        },
         { id: 'consentGiven', text: "As the teacher, record consent from Anjali's guardian." },
         { id: 'published', text: 'Publish publicly. The showcase shows the given name only.' },
         { id: 'withdrawn', text: 'Withdraw consent. The photograph leaves the showcase at once.' },
@@ -1993,7 +2025,8 @@
         esc(S.claim.udise) +
         '</p></div>';
       html += '<p class="notice notice--warn">' + esc(t('claimPending')) + '</p>';
-      html += '<div class="card"><span class="tag tag--warn">' + esc(t('pendingSchool')) + '</span>';
+      html +=
+        '<div class="card"><span class="tag tag--warn">' + esc(t('pendingSchool')) + '</span>';
       html +=
         '<p class="muted" style="margin-top:.5rem">' +
         esc(
@@ -2032,8 +2065,7 @@
   }
 
   function renderClaimsQueue() {
-    var html =
-      '<div><h1 class="screen__title">' + esc(t('claimsTitle')) + '</h1></div>';
+    var html = '<div><h1 class="screen__title">' + esc(t('claimsTitle')) + '</h1></div>';
 
     if (!S.claim || S.claim.status !== 'PENDING') {
       html += '<p class="empty">' + esc(t('claimsEmpty')) + '</p>';
@@ -2052,10 +2084,7 @@
       esc(t('pendingSchool')) +
       '</span></div>';
 
-    html +=
-      '<p class="notice" style="margin-top:.6rem">' +
-      esc(t('notInRegister')) +
-      '</p>';
+    html += '<p class="notice" style="margin-top:.6rem">' + esc(t('notInRegister')) + '</p>';
 
     html +=
       '<div class="register" style="margin-top:.6rem"><div class="register__row"><span><strong>' +
@@ -2602,11 +2631,7 @@
     act.status = 'PENDING';
     act.reason = null;
     markDone('submitted');
-    toast(
-      S.lang === 'hi'
-        ? 'प्रधानाध्यापक को भेज दिया गया।'
-        : 'Sent to the head teacher.',
-    );
+    toast(S.lang === 'hi' ? 'प्रधानाध्यापक को भेज दिया गया।' : 'Sent to the head teacher.');
     S.open = null;
     render();
   }
@@ -2762,9 +2787,7 @@
 
     act.visibility = 'PUBLIC';
     markDone('published');
-    toast(
-      S.lang === 'hi' ? 'सार्वजनिक रूप से प्रकाशित।' : 'Published publicly.',
-    );
+    toast(S.lang === 'hi' ? 'सार्वजनिक रूप से प्रकाशित।' : 'Published publicly.');
     S.open = null;
     S.tab = 'showcase';
     render();
@@ -2775,11 +2798,7 @@
     if (!s) return;
     s.consent = 'GRANTED';
     markDone('consentGiven');
-    toast(
-      S.lang === 'hi'
-        ? 'सहमति दर्ज हो गई।'
-        : 'Consent recorded.',
-    );
+    toast(S.lang === 'hi' ? 'सहमति दर्ज हो गई।' : 'Consent recorded.');
     render();
   }
 

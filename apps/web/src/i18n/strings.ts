@@ -319,6 +319,64 @@ export const strings = {
     'trust.sample': 'कितना काम जाँचा जाता है',
     'update.available': 'नया संस्करण उपलब्ध है।',
     'update.reload': 'अभी अपडेट करें',
+
+    // The promises, in the order a sceptical teacher asks about them. Keyed by
+    // the guarantee ids in packages/shared/src/guarantees.ts; a test asserts
+    // that the two never drift apart.
+    'promise.title': 'हमारे वचन',
+    'promise.headline':
+      'यह मंच व्यवस्था को नापता है, व्यक्ति को नहीं। यह दिखा सकता है कि किस विद्यालय में पानी नहीं है और किस विकास खंड में अनुदान अटका है। यह किसी को शिक्षकों की वरीयता सूची नहीं दिखा सकता।',
+    'promise.intro':
+      'हर वचन के साथ यह भी लिखा है कि वह क्यों है। ये वचन केवल लिखे नहीं गए हैं — इन्हें तोड़ने वाला कोई भी बदलाव इसी मंच की जाँच में पकड़ा जाता है।',
+    'promise.enforced': 'यह वचन कोड में जाँचा जाता है',
+    'promise.neverBuilt': 'जो कभी नहीं बनाया जाएगा',
+    'promise.neverBuiltIntro':
+      'ऐसी सुविधाएँ जिनकी माँग समय-समय पर उठती रहेगी, और जिन्हें बनाने से हम मना करते हैं। साथ में वह वाक्य भी है जिसके रूप में यह माँग आमतौर पर आती है।',
+    'promise.arrivesAs': 'माँग इस रूप में आती है',
+    'promise.changing':
+      'इनमें से किसी वचन को बदलना एक बातचीत है, कोई तकनीकी बदलाव नहीं। यदि आपको लगता है कि कोई वचन तोड़ा गया है, तो शिकायत अधिकारी को लिखिए।',
+
+    'promise.noAttendanceOrLocationTracking': 'यह मंच कभी नहीं देखता कि आप कहाँ हैं या कब पहुँचे।',
+    'promise.noAttendanceOrLocationTracking.why':
+      'न लोकेशन, न सेल्फ़ी, न हाज़िरी, न \u2018आख़िरी बार कब खोला\u2019। यहाँ यह दर्ज होता है कि विद्यालय ने क्या किया — यह नहीं कि आप कहाँ थे।',
+    'promise.noTeacherRanking': 'किसी शिक्षक की तुलना किसी दूसरे शिक्षक से कभी नहीं की जाती।',
+    'promise.noTeacherRanking.why':
+      'इस मंच पर शिक्षकों की कोई वरीयता सूची नहीं है — न किसी अधिकारी के लिए, न किसी स्तर पर।',
+    'promise.noIndividualTeacherMetricsAboveSchool':
+      'विद्यालय के बाहर किसी को आपके नाम के साथ कोई संख्या नहीं दिखती।',
+    'promise.noIndividualTeacherMetricsAboveSchool.why':
+      'अधिकारी यह देखते हैं कि विद्यालय ने क्या किया। उसमें किसका कितना योगदान रहा, यह विद्यालय से बाहर नहीं जाता।',
+    'promise.blockedIsAFirstClassAnswer':
+      'आप किसी आदेश का उत्तर यह भी दे सकते हैं कि \u2018नहीं हो पाया, और कारण यह है\u2019।',
+    'promise.blockedIsAFirstClassAnswer.why':
+      'जो धनराशि नहीं आई और जो सामग्री नहीं पहुँची, वह उसी रूप में दर्ज होती है — और उसी के नाम, जिसकी ज़िम्मेदारी थी।',
+    'promise.constraintsTravelWithAchievements':
+      'विद्यालय ने क्या किया, यह हमेशा इसके साथ दिखता है कि विद्यालय में क्या नहीं था।',
+    'promise.constraintsTravelWithAchievements.why':
+      'रिक्त पद और बंद हैंडपंप बताए बिना कोई परिणाम पढ़ना विद्यालय का विवरण नहीं, शिक्षक पर निर्णय है।',
+    'promise.everyEscalationHasAClock':
+      'आप जो बात उठाते हैं, उस पर घड़ी उस कार्यालय की चलती है जिसे उत्तर देना है।',
+    'promise.everyEscalationHasAClock.why':
+      'हर माँग और हर शिकायत के साथ उसकी आयु खुले में दिखती है, और वह आयु अधिकारी को बतानी होती है।',
+    'promise.teacherOwnsTheirRecord': 'आपका रिकॉर्ड आपका है। साथ ले जाइए, या हटा दीजिए।',
+    'promise.teacherOwnsTheirRecord.why':
+      'जो कुछ आपने किया, उसे कभी भी बिना किसी से पूछे निर्यात कीजिए। मंच छोड़िए तो आपका व्यक्तिगत विवरण आपके साथ जाता है।',
+    'promise.recognitionIsNamedAndHuman':
+      'सराहना उस व्यक्ति की ओर से आती है जिसने उस पर अपना नाम लिखा है, मशीन से नहीं।',
+    'promise.recognitionIsNamedAndHuman.why':
+      'न स्वतः मिलने वाले बैज, न अंक। किसी अधिकारी ने लिखा है और उस पर उनका नाम है।',
+    'promise.noChildPersonalData': 'किसी बच्चे का नाम, फ़ोटो या विवरण यहाँ रखा ही नहीं जाता।',
+    'promise.noChildPersonalData.why':
+      'सहमति के साथ भी नहीं। यह मंच बच्चों की गिनती रखता है, किसी एक बच्चे को जानता नहीं।',
+    'promise.noAdvertisingNoDataSale':
+      'कोई विज्ञापन नहीं, और यहाँ की कोई जानकारी कभी किसी को बेची नहीं जाती।',
+    'promise.noAdvertisingNoDataSale.why':
+      'न ट्रैकर, न किसी बाहरी कंपनी का विश्लेषण, न किसी क़ीमत पर डेटा का लेन-देन।',
+    'promise.freeForTeachersAndFamilies':
+      'आपके लिए, आपके विद्यालय के लिए और हर परिवार के लिए निःशुल्क। हमेशा।',
+    'promise.freeForTeachersAndFamilies.why':
+      'इस मंच पर किसी शिक्षक, विद्यालय, अभिभावक या गाँव से कभी कोई शुल्क नहीं लिया जाता।',
+
     loading: 'लोड हो रहा है…',
   },
 
@@ -631,6 +689,62 @@ export const strings = {
     'trust.sample': 'Share of work reviewed',
     'update.available': 'A new version is available.',
     'update.reload': 'Update now',
+
+    'promise.title': 'Our promises',
+    'promise.headline':
+      'This platform measures systems, never people. It can show you the school that has no water and the block where grants stall. It cannot show anyone a list of teachers ranked by anything.',
+    'promise.intro':
+      'Each promise carries the reason it exists. They are not only written down — any change that breaks one of them fails this platform\u2019s own tests.',
+    'promise.enforced': 'Enforced by a test, not by good intentions',
+    'promise.neverBuilt': 'What will never be built',
+    'promise.neverBuiltIntro':
+      'Features that will be asked for sooner or later, and that we refuse. Each one is listed with the sentence it usually arrives as.',
+    'promise.arrivesAs': 'Usually asked for as',
+    'promise.changing':
+      'Changing any of these is a conversation, not a technical decision. If you believe a promise has been broken, write to the grievance officer.',
+
+    'promise.noAttendanceOrLocationTracking':
+      'This platform never records where you are or when you arrived.',
+    'promise.noAttendanceOrLocationTracking.why':
+      'No location, no selfie, no check-in and no \u2018last seen\u2019. It records what the school did, not where you were.',
+    'promise.noTeacherRanking': 'No one is ever ranked against another teacher.',
+    'promise.noTeacherRanking.why':
+      'There is no league table of teachers in this platform, for anybody, at any level.',
+    'promise.noIndividualTeacherMetricsAboveSchool':
+      'Nobody outside your school ever sees a number attached to your name.',
+    'promise.noIndividualTeacherMetricsAboveSchool.why':
+      'Officers see what the school did. How that divides between the people in it does not leave the school.',
+    'promise.blockedIsAFirstClassAnswer':
+      'You can answer an instruction with \u2018we could not, and here is why\u2019.',
+    'promise.blockedIsAFirstClassAnswer.why':
+      'Money that did not arrive and material that was never delivered are recorded as what they are, against whoever owed them.',
+    'promise.constraintsTravelWithAchievements':
+      'What your school is missing is shown beside what your school achieved.',
+    'promise.constraintsTravelWithAchievements.why':
+      'A result read without the vacant posts and the broken hand pump is a judgement of you rather than a description of the school.',
+    'promise.everyEscalationHasAClock':
+      'When you raise something, the clock runs on the office that owes you an answer.',
+    'promise.everyEscalationHasAClock.why':
+      'Every escalation carries its age in the open, and the age is the officer\u2019s to explain.',
+    'promise.teacherOwnsTheirRecord': 'Your record is yours. Take it with you, or take it away.',
+    'promise.teacherOwnsTheirRecord.why':
+      'Export everything you have done, whenever you want, without asking. Leave, and your personal details go with you.',
+    'promise.recognitionIsNamedAndHuman':
+      'Appreciation comes from a person who signed it, never from a machine.',
+    'promise.recognitionIsNamedAndHuman.why':
+      'No automatic badges and no scores. An officer wrote it and their name is on it.',
+    'promise.noChildPersonalData':
+      'No child\u2019s name, photograph or details are held here at all.',
+    'promise.noChildPersonalData.why':
+      'Not with consent either. The platform counts children; it does not know a single one of them.',
+    'promise.noAdvertisingNoDataSale': 'No advertising, and nothing here is ever sold to anyone.',
+    'promise.noAdvertisingNoDataSale.why':
+      'No trackers, no third-party analytics, no data brokerage, at any price.',
+    'promise.freeForTeachersAndFamilies':
+      'Free for you, for your school, and for every family. Always.',
+    'promise.freeForTeachersAndFamilies.why':
+      'Nothing on this platform is ever charged to a teacher, a school, a parent or a village.',
+
     loading: 'Loading…',
   },
 } as const;

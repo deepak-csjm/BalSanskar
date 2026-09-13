@@ -19,9 +19,23 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     // Plain Node scripts: not part of a tsconfig, and they use Node globals.
+    //
+    // The screenshot script also passes callbacks to Playwright's
+    // `page.evaluate`, which runs them inside the browser — so the browser
+    // globals are legitimately in scope there even though the file itself is
+    // executed by Node.
     files: ['scripts/**/*.{js,mjs}'],
     languageOptions: {
-      globals: { console: 'readonly', process: 'readonly', URL: 'readonly' },
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        URL: 'readonly',
+        fetch: 'readonly',
+        AbortSignal: 'readonly',
+        document: 'readonly',
+        window: 'readonly',
+        localStorage: 'readonly',
+      },
     },
   },
   {

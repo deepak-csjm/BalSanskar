@@ -13,6 +13,7 @@ import {
   type Geography,
   type TestUser,
 } from './helpers.js';
+import { PLATFORM_GUARANTEES } from '@balsanskar/shared';
 import { expireStaleClaims } from '../src/modules/org/claim.service.js';
 import { sweepOrphanedUploads } from '../src/modules/activity/media.service.js';
 
@@ -899,6 +900,106 @@ describe('school onboarding and the escalation gate', () => {
   // -------------------------------------------------------------------------
   // The line the platform does not cross
   // -------------------------------------------------------------------------
+
+  /**
+   * The promises in packages/shared/src/guarantees.ts, asserted against the
+   * running database rather than against anybody's good intentions.
+   *
+   * The shared package can only check that the promises are stated coherently.
+   * Whether the schema actually makes them impossible to break is a different
+   * question, and it is the one that matters — a guarantee is only as strong as
+   * the narrowest place it can be violated.
+   */
+  describe('teachers', () => {
+    it('has nowhere to record that a person was somewhere at a time', async () => {
+      // The instrument UP ordered on 8 July 2024 and withdrew about nine days
+      // later. It cannot arrive here by accident, and arriving deliberately has
+      // to break this test first.
+      //
+      // A school building's coordinates are a different thing entirely and are
+      // allowed: they are fixed, they are already published in UDISE+, and they
+      // describe a place rather than a person. So the assertion is not "no
+      // coordinates anywhere" — it is that coordinates live on the building and
+      // nowhere near a person, a submission or a photograph.
+      const located = await prisma().$queryRaw<{ table_name: string; column_name: string }[]>`
+        SELECT table_name, column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND (
+            column_name ILIKE '%latitude%'
+            OR column_name ILIKE '%longitude%'
+            OR column_name ILIKE '%geotag%'
+            OR column_name ILIKE '%geoloc%'
+            OR column_name ILIKE '%gps%'
+          )
+        ORDER BY table_name, column_name
+      `;
+      expect(located).toEqual([
+        { table_name: 'schools', column_name: 'latitude' },
+        { table_name: 'schools', column_name: 'longitude' },
+      ]);
+
+      // Presence, in any of the shapes it usually arrives in.
+      const presence = await prisma().$queryRaw<{ table_name: string; column_name: string }[]>`
+        SELECT table_name, column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND (
+            column_name ILIKE '%attendance%'
+            OR column_name ILIKE '%checkin%'
+            OR column_name ILIKE '%check_in%'
+            OR column_name ILIKE '%punch%'
+            OR column_name ILIKE '%lastseen%'
+            OR column_name ILIKE '%last_seen%'
+            OR column_name ILIKE '%loggedinat%'
+            OR column_name ILIKE '%present_at%'
+          )
+      `;
+      expect(presence).toEqual([]);
+    });
+
+    it('never lets a report above the school carry a per-teacher number', async () => {
+      // A block officer sees what the school did. How that divides between the
+      // people inside it is the head teacher's business and stops at the gate.
+      const board = await app.inject({
+        method: 'GET',
+        url: '/v1/reports/leaderboard?groupBy=TEACHER',
+        headers: auth(blockOfficer),
+      });
+      expect(board.statusCode).toBe(400);
+
+      const allowed = await app.inject({
+        method: 'GET',
+        url: '/v1/reports/leaderboard?groupBy=SCHOOL',
+        headers: auth(blockOfficer),
+      });
+      expect(allowed.statusCode).toBe(200);
+
+      // And nothing in a legitimate report body may key a figure to a person.
+      const summary = await app.inject({
+        method: 'GET',
+        url: '/v1/reports/overview',
+        headers: auth(blockOfficer),
+      });
+      expect(summary.statusCode).toBe(200);
+      const body = summary.json() as unknown;
+      const serialised = JSON.stringify(body);
+      // `activeTeachers` is a count of distinct people and is fine; a teacher's
+      // id or name appearing anywhere in an officer's report is not.
+      expect(serialised).not.toMatch(/"teacherId"/);
+      expect(serialised).not.toMatch(/"byTeacher"/);
+      expect(serialised).not.toMatch(/"authorId"/);
+    });
+
+    it('keeps every promise the teacher is shown', () => {
+      // The screen a teacher reads before signing up quotes these. If one is
+      // ever switched off to make a feature work, the screen becomes a lie and
+      // this fails before the deploy does.
+      for (const [name, held] of Object.entries(PLATFORM_GUARANTEES)) {
+        expect(held, `${name} is no longer guaranteed`).toBe(true);
+      }
+    });
+  });
 
   describe('children', () => {
     /**
