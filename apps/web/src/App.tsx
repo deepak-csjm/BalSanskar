@@ -44,6 +44,7 @@ const Enrolment = lazy(() =>
 const Reports = lazy(() => import('./pages/Reports.js').then((m) => ({ default: m.Reports })));
 const People = lazy(() => import('./pages/People.js').then((m) => ({ default: m.People })));
 const Claims = lazy(() => import('./pages/Claims.js').then((m) => ({ default: m.Claims })));
+const Orders = lazy(() => import('./pages/Orders.js').then((m) => ({ default: m.Orders })));
 const Duty = lazy(() => import('./pages/Duty.js').then((m) => ({ default: m.Duty })));
 const Waiting = lazy(() => import('./pages/Waiting.js').then((m) => ({ default: m.Waiting })));
 const Clearance = lazy(() =>
@@ -87,6 +88,7 @@ export function App() {
                     but what the offices above it owe the school. */}
                 <Route path="waiting" element={<Waiting />} />
                 <Route path="duty" element={<Duty />} />
+                <Route path="orders" element={<Orders />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="people" element={<People />} />
                 <Route path="claims" element={<Claims />} />

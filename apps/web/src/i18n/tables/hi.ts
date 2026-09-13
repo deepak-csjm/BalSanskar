@@ -452,6 +452,51 @@ export const hi = {
   'duty.cat.PROVISIONING': 'सामग्री / भोजन व्यवस्था',
   'duty.cat.OTHER': 'अन्य',
 
+  // The register of orders. Two jobs on one screen: what applies to this
+  // school, and whether the letter in the WhatsApp group is real.
+  'nav.orders': 'आदेश',
+  'order.title': 'आदेश',
+  'order.intro':
+    'इस विद्यालय पर इस समय कौन से आदेश लागू हैं। जो आदेश किसी नए आदेश से बदल चुका है, वह यहाँ नहीं दिखता।',
+  'order.checkTitle': 'क्या यह आदेश असली है?',
+  'order.checkIntro':
+    'व्हाट्सएप पर आए किसी पत्र का पत्रांक यहाँ डालिए। बीएसए के हस्ताक्षर वाले फ़र्ज़ी आदेश भी इसी रास्ते से आते हैं।',
+  'order.checkLabel': 'पत्रांक',
+  'order.check': 'देखिए',
+  'order.checkFound': 'यह आदेश रजिस्टर में दर्ज है।',
+  'order.checkNotFound':
+    'यह पत्रांक इस रजिस्टर में नहीं है। इसका अर्थ यह नहीं कि आदेश ग़लत है — इस रजिस्टर में केवल वही आदेश हैं जो यहाँ प्रकाशित किए गए हैं। संदेह हो तो खंड कार्यालय से पुष्टि कर लीजिए।',
+  'order.checkSuperseded': 'ध्यान दीजिए — यह आदेश बाद के किसी आदेश से बदल चुका है।',
+  'order.plainSummary': 'विद्यालय को क्या करना है',
+  'order.letterNumber': 'पत्रांक',
+  'order.issuedBy': 'निर्गत कार्यालय',
+  'order.dueBy': 'अंतिम तिथि',
+  'order.document': 'मूल आदेश देखिए',
+  'order.empty': 'इस समय कोई आदेश लंबित नहीं है।',
+  'order.respond': 'उत्तर दीजिए',
+  'order.myAnswer': 'आपका उत्तर',
+  'order.answeredBy': 'उत्तर देने वाले',
+  'order.whatIsMissing': 'क्या नहीं मिला',
+  'order.noteOptional': 'कुछ और कहना हो तो (वैकल्पिक)',
+  'order.blockedHelp':
+    'यह बताना कि क्या नहीं मिला, कोई सफ़ाई नहीं है। यह उस कार्यालय के नाम दर्ज होता है जिसे वह चीज़ भेजनी थी।',
+  'order.src.COURT_DIRECTION': 'न्यायालय का निर्देश',
+  'order.src.STATE_ORDER': 'शासनादेश',
+  'order.src.DISTRICT_ORDER': 'जनपद स्तरीय आदेश',
+  'order.src.BLOCK_INSTRUCTION': 'खंड स्तरीय निर्देश',
+  'order.state.SEEN': 'देख लिया',
+  'order.state.IN_PROGRESS': 'चल रहा है',
+  'order.state.DONE': 'हो गया',
+  'order.state.BLOCKED': 'नहीं हो पाया',
+  'order.state.NOT_APPLICABLE': 'हमारे विद्यालय पर लागू नहीं',
+  'order.blocked.FUNDS_NOT_RECEIVED': 'धनराशि नहीं मिली',
+  'order.blocked.MATERIAL_NOT_RECEIVED': 'सामग्री नहीं मिली',
+  'order.blocked.STAFF_SHORTAGE': 'शिक्षक/कर्मचारी नहीं हैं',
+  'order.blocked.BUILDING_OR_FACILITY_UNUSABLE': 'भवन या सुविधा उपयोग योग्य नहीं',
+  'order.blocked.NO_INSTRUCTION_RECEIVED': 'कोई निर्देश ही नहीं मिला',
+  'order.blocked.CONFLICTS_WITH_ANOTHER_ORDER': 'किसी दूसरे आदेश से टकराव है',
+  'order.blocked.OTHER': 'अन्य कारण',
+
   loading: 'लोड हो रहा है…',
 } as const;
 

@@ -62,6 +62,20 @@ export const PERMISSIONS = [
    */
   'duty:write',
 
+  /**
+   * Put an order on the register, or withdraw one.
+   *
+   * Held from the block office upward, but the source a publisher may claim is
+   * bounded by their own office — a block officer can register a block
+   * instruction and not a state order. That is the Bareilly fodder case made
+   * structural: the problem was never that a block officer issued an
+   * instruction, but that it reached schools wearing the authority of a
+   * government order.
+   */
+  'directive:publish',
+  /** A school's answer to an order. Every teacher has it; it is not a duty. */
+  'directive:respond',
+
   // Work of the school
   'activity:create',
   'activity:read',
@@ -103,6 +117,7 @@ const TEACHER_PERMISSIONS: Permission[] = [
   'activity:submit',
   'village:write',
   'duty:write',
+  'directive:respond',
   'achievement:read',
   'achievement:create',
   'report:read',
@@ -126,6 +141,7 @@ const PRINCIPAL_PERMISSIONS: Permission[] = [
 
 const BLOCK_ADMIN_PERMISSIONS: Permission[] = [
   ...PRINCIPAL_PERMISSIONS,
+  'directive:publish',
   'user:suspend',
   'audit:read',
   // The two powers that make the block office the real check on a school:

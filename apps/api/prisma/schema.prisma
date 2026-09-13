@@ -139,6 +139,46 @@ enum Scheme {
 /// The three purposes the Right to Education Act permits a teacher to be
 /// deployed for, named exactly as s.27 names them, and then everything else.
 /// See packages/shared/src/contracts/duty.ts.
+/// Where an instruction came from, and therefore what weight it carries.
+/// Orders currently arrive at a school with no rank at all: a court direction
+/// and a block officer's improvisation look identical on a phone screen.
+enum DirectiveSource {
+  COURT_DIRECTION
+  STATE_ORDER
+  DISTRICT_ORDER
+  BLOCK_INSTRUCTION
+}
+
+enum DirectiveStatus {
+  ACTIVE
+  SUPERSEDED
+  WITHDRAWN
+}
+
+/// What a school can say back. A system whose only acceptable answer is "done"
+/// never learns that the money did not arrive; it learns that the teacher
+/// failed.
+enum ResponseState {
+  SEEN
+  IN_PROGRESS
+  DONE
+  BLOCKED
+  NOT_APPLICABLE
+}
+
+/// Why it could not be done. Every entry names something outside the school's
+/// control, and the absence of a "did not get round to it" option is
+/// deliberate — see packages/shared/src/contracts/directive.ts.
+enum BlockedReason {
+  FUNDS_NOT_RECEIVED
+  MATERIAL_NOT_RECEIVED
+  STAFF_SHORTAGE
+  BUILDING_OR_FACILITY_UNUSABLE
+  NO_INSTRUCTION_RECEIVED
+  CONFLICTS_WITH_ANOTHER_ORDER
+  OTHER
+}
+
 enum DutyCategory {
   CENSUS
   ELECTION
@@ -240,16 +280,18 @@ model District {
   nameEn   String
   division String?
 
-  blocks       Block[]
-  schools      School[]
-  users        User[]
-  activities   Activity[]
-  achievements Achievement[]
-  duties       DutyRecord[]
-  needs        SchoolNeed[]
-  smcMeetings  SmcMeeting[]
-  surveys      HabitationSurvey[]
-  claims       SchoolClaim[]
+  blocks             Block[]
+  schools            School[]
+  users              User[]
+  activities         Activity[]
+  achievements       Achievement[]
+  directives         Directive[]
+  directiveResponses DirectiveResponse[]
+  duties             DutyRecord[]
+  needs              SchoolNeed[]
+  smcMeetings        SmcMeeting[]
+  surveys            HabitationSurvey[]
+  claims             SchoolClaim[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -266,15 +308,17 @@ model Block {
   nameHi     String
   nameEn     String
 
-  schools      School[]
-  users        User[]
-  activities   Activity[]
-  achievements Achievement[]
-  duties       DutyRecord[]
-  needs        SchoolNeed[]
-  smcMeetings  SmcMeeting[]
-  surveys      HabitationSurvey[]
-  claims       SchoolClaim[]
+  schools            School[]
+  users              User[]
+  activities         Activity[]
+  achievements       Achievement[]
+  directives         Directive[]
+  directiveResponses DirectiveResponse[]
+  duties             DutyRecord[]
+  needs              SchoolNeed[]
+  smcMeetings        SmcMeeting[]
+  surveys            HabitationSurvey[]
+  claims             SchoolClaim[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -315,15 +359,16 @@ model School {
   returnedCount  Int       @default(0)
   lastReturnedAt DateTime?
 
-  users        User[]
-  enrolments   ClassEnrolment[]
-  duties       DutyRecord[]
-  needs        SchoolNeed[]
-  smcMeetings  SmcMeeting[]
-  surveys      HabitationSurvey[]
-  activities   Activity[]
-  achievements Achievement[]
-  claims       SchoolClaim[]
+  users              User[]
+  enrolments         ClassEnrolment[]
+  directiveResponses DirectiveResponse[]
+  duties             DutyRecord[]
+  needs              SchoolNeed[]
+  smcMeetings        SmcMeeting[]
+  surveys            HabitationSurvey[]
+  activities         Activity[]
+  achievements       Achievement[]
+  claims             SchoolClaim[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -351,6 +396,97 @@ model School {
 /// with no name attached, because a record of days lost reads in the wrong
 /// hands as a record of absence, and this state enforces deployment by
 /// withholding salary.
+/// An order some office actually issued, put on a register a school can read.
+///
+/// The platform verifies and never originates: every row points at a document
+/// that exists elsewhere. See packages/shared/src/contracts/directive.ts for
+/// why a register is needed at all when the state runs three of them.
+model Directive {
+  id     String          @id @default(cuid())
+  source DirectiveSource
+  status DirectiveStatus @default(ACTIVE)
+
+  /// The पत्रांक as printed. What an authenticity lookup matches on, so it is
+  /// indexed in a normalised form rather than as typed.
+  letterNumber           String
+  letterNumberNormalised String
+  issuedOn               DateTime @db.Date
+  /// The office that signed it, as an office. Never an individual.
+  issuingOffice          String
+
+  title        String
+  /// What the school must do, in plain Hindi. Mandatory and separate from the
+  /// order's own text: a shasanadesh is drafted for an officer, not as a task
+  /// for a head teacher, and with one academic support person per thirty-odd
+  /// schools nothing arrives explained.
+  plainSummary String
+  documentUrl  String?
+  dueBy        DateTime? @db.Date
+
+  /// Empty means every school in reach. Narrowing is by type only — anything
+  /// finer would need data about schools this platform does not hold.
+  schoolTypes SchoolType[]
+
+  /// Who it reaches. Null at both levels means state-wide.
+  districtId String?
+  district   District? @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  blockId    String?
+  block      Block?    @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  /// The chain that lets a school see exactly one current instruction instead
+  /// of three contradictory photographs of photocopies.
+  supersedesId String?    @unique
+  supersedes   Directive? @relation("DirectiveSupersession", fields: [supersedesId], references: [id], onDelete: SetNull)
+  supersededBy Directive? @relation("DirectiveSupersession")
+
+  publishedById     String
+  publishedBy       User   @relation("DirectivePublisher", fields: [publishedById], references: [id], onDelete: Restrict)
+  /// The office that put it on the register, so the entry is itself accountable.
+  publishedByOffice String
+
+  responses DirectiveResponse[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([letterNumberNormalised])
+  @@index([status, issuedOn])
+  @@index([districtId, status])
+  @@index([blockId, status])
+  @@map("directives")
+}
+
+/// A school's answer. An acknowledgement, never a compliance score.
+model DirectiveResponse {
+  id          String    @id @default(cuid())
+  directiveId String
+  directive   Directive @relation(fields: [directiveId], references: [id], onDelete: Cascade)
+  schoolId    String
+  school      School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  blockId     String
+  block       Block     @relation(fields: [blockId], references: [id], onDelete: Restrict)
+  districtId  String
+  district    District  @relation(fields: [districtId], references: [id], onDelete: Restrict)
+
+  state         ResponseState
+  /// Only ever set against BLOCKED, and every value names something the school
+  /// cannot fix itself. There is no option meaning "we did not get round to
+  /// it", because a justification field an officer reads is a confession field.
+  blockedReason BlockedReason?
+  note          String?
+
+  respondedById String
+  respondedBy   User   @relation("DirectiveResponder", fields: [respondedById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([directiveId, schoolId])
+  @@index([directiveId, state])
+  @@index([schoolId])
+  @@map("directive_responses")
+}
+
 model DutyRecord {
   id         String   @id @default(cuid())
   schoolId   String
@@ -641,21 +777,23 @@ model User {
   /// their own password.
   mustSetPassword Boolean   @default(false)
 
-  authoredActivities   Activity[]         @relation("ActivityAuthor")
-  reviewedActivities   Activity[]         @relation("ActivityReviewer")
-  attestedActivities   Activity[]         @relation("ActivityAttestor")
-  clearedActivities    Activity[]         @relation("ActivityClearance")
-  reviewedClaims       SchoolClaim[]      @relation("ClaimReviewer")
-  updatedEnrolments    ClassEnrolment[]   @relation("EnrolmentUpdatedBy")
-  createdNeeds         SchoolNeed[]       @relation("NeedCreatedBy")
-  dutyRecords          DutyRecord[]       @relation("DutyTeacher")
-  dutyAttestations     DutyRecord[]       @relation("DutyAttestor")
-  recordedSmcMeetings  SmcMeeting[]       @relation("SmcRecordedBy")
-  answeredSmcMeetings  SmcMeeting[]       @relation("SmcAnsweredBy")
-  recordedSurveys      HabitationSurvey[] @relation("SurveyRecordedBy")
-  creditedAchievements Achievement[]      @relation("AchievementCredited")
-  createdAchievements  Achievement[]      @relation("AchievementCreatedBy")
-  verifiedAchievements Achievement[]      @relation("AchievementVerifiedBy")
+  authoredActivities   Activity[]          @relation("ActivityAuthor")
+  reviewedActivities   Activity[]          @relation("ActivityReviewer")
+  attestedActivities   Activity[]          @relation("ActivityAttestor")
+  clearedActivities    Activity[]          @relation("ActivityClearance")
+  reviewedClaims       SchoolClaim[]       @relation("ClaimReviewer")
+  updatedEnrolments    ClassEnrolment[]    @relation("EnrolmentUpdatedBy")
+  createdNeeds         SchoolNeed[]        @relation("NeedCreatedBy")
+  directivesPublished  Directive[]         @relation("DirectivePublisher")
+  directiveResponses   DirectiveResponse[] @relation("DirectiveResponder")
+  dutyRecords          DutyRecord[]        @relation("DutyTeacher")
+  dutyAttestations     DutyRecord[]        @relation("DutyAttestor")
+  recordedSmcMeetings  SmcMeeting[]        @relation("SmcRecordedBy")
+  answeredSmcMeetings  SmcMeeting[]        @relation("SmcAnsweredBy")
+  recordedSurveys      HabitationSurvey[]  @relation("SurveyRecordedBy")
+  creditedAchievements Achievement[]       @relation("AchievementCredited")
+  createdAchievements  Achievement[]       @relation("AchievementCreatedBy")
+  verifiedAchievements Achievement[]       @relation("AchievementVerifiedBy")
   appreciations        Appreciation[]
   refreshTokens        RefreshToken[]
   auditEvents          AuditEvent[]

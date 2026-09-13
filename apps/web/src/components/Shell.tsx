@@ -47,6 +47,7 @@ export function Shell() {
         {/* Placed second, ahead of every officer tool: the screen that tells
             a teacher somebody else owes them something is the one that makes
             this platform theirs rather than another thing measuring them. */}
+        <Tab to="/app/orders" icon="📜" label={t('nav.orders')} />
         <Tab to="/app/waiting" icon="⏳" label={t('nav.waiting')} />
         {may('duty:write') ? <Tab to="/app/duty" icon="📅" label={t('nav.duty')} /> : null}
         {may('enrolment:write') ? (
