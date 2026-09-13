@@ -6,6 +6,7 @@ import {
   type LeaderboardQuery,
   type OverviewReport,
   type ReportQuery,
+  type SchemeReport,
 } from '@balsanskar/shared';
 import { describeScopeLevel, resolveScopeFilter, type ScopeFilter } from '../../lib/scope.js';
 import type { Actor } from '../../plugins/auth.js';
@@ -512,4 +513,86 @@ export function toCsv(headers: string[], rows: Array<Array<string | number | nul
   const lines = [headers.map(escape).join(','), ...rows.map((row) => row.map(escape).join(','))];
   // A BOM so that Excel on a Windows machine reads the Hindi column names correctly.
   return EXCEL_BOM + lines.join(CRLF) + CRLF;
+}
+
+/**
+ * The block office's monthly scheme-wise return.
+ *
+ * The reason an officer wants this platform used. They compile exactly this
+ * every month already — how much work went towards NIPUN Bharat, how many
+ * schools did anything for Kayakalp, how many children were reached — out of a
+ * register and a WhatsApp album, by hand, against a deadline. Here it is a
+ * query over work teachers have already logged for their own reasons.
+ *
+ * A showcase gives nobody in the chain a reason to open the platform twice.
+ * This does, and the teacher's tag is what produces it, which is why tagging is
+ * three taps on the form rather than a separate chore.
+ */
+export async function buildSchemeReport(
+  prisma: PrismaClient,
+  actor: Actor,
+  query: ReportQuery,
+): Promise<SchemeReport> {
+  const scope = resolveScopeFilter(actor, query);
+  const window = resolveWindow(query);
+  const where = activityWhere(scope, window);
+
+  const activities = await prisma.activity.findMany({
+    where,
+    select: { schemes: true, schoolId: true, participantCount: true, clearance: true },
+  });
+
+  const rows = new Map<
+    string,
+    { activities: number; schools: Set<string>; childParticipations: number; cleared: number }
+  >();
+  const schoolsThatLogged = new Set<string>();
+
+  for (const activity of activities) {
+    schoolsThatLogged.add(activity.schoolId);
+    // An activity tagged with nothing still counts, under NONE. Dropping it
+    // would make the report disagree with the totals on the overview screen,
+    // and an officer who spots that stops trusting both.
+    const schemes = activity.schemes.length > 0 ? activity.schemes : (['NONE'] as const);
+    for (const scheme of schemes) {
+      const row = rows.get(scheme) ?? {
+        activities: 0,
+        schools: new Set<string>(),
+        childParticipations: 0,
+        cleared: 0,
+      };
+      row.activities += 1;
+      row.schools.add(activity.schoolId);
+      row.childParticipations += activity.participantCount ?? 0;
+      if (activity.clearance === 'CLEARED' || activity.clearance === 'AUTO_CLEARED') {
+        row.cleared += 1;
+      }
+      rows.set(scheme, row);
+    }
+  }
+
+  const schoolsInScope = await prisma.school.count({
+    where: { ...schoolWhere(scope), isActive: true },
+  });
+
+  return {
+    scope: {
+      level: describeScopeLevel(scope),
+      name: await describeScopeName(prisma, scope),
+      from: window.fromIso,
+      to: window.toIso,
+    },
+    // Busiest programme first: the officer's summary line is usually about the
+    // one with the most behind it.
+    rows: [...rows.entries()]
+      .map(([scheme, row]) => ({
+        scheme,
+        activities: row.activities,
+        schools: row.schools.size,
+        childParticipations: row.childParticipations,
+        cleared: row.cleared,
+      }))
+      .sort((a, b) => b.activities - a.activities),
+    schoolsWithNothingLogged: Math.max(0, schoolsInScope - schoolsThatLogged.size),
+  };
 }

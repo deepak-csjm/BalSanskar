@@ -68,6 +68,7 @@ describe('reporting and the public showcase', () => {
   async function publishActivity(options: {
     visibility: 'SCHOOL' | 'BLOCK' | 'DISTRICT' | 'PUBLIC';
     title?: string;
+    schemes?: string[];
   }): Promise<string> {
     const created = await app.inject({
       method: 'POST',
@@ -81,6 +82,7 @@ describe('reporting and the public showcase', () => {
         occurredOn: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10),
         classLevels: ['4'],
         participantCount: 28,
+        schemes: options.schemes ?? [],
       },
     });
     const id = (created.json() as { id: string }).id;
@@ -379,6 +381,78 @@ describe('reporting and the public showcase', () => {
         .rows;
       expect(rows[0]?.publishedActivities).toBe(0);
       expect(rows[rows.length - 1]?.id).toBe(geo.schoolA1);
+    });
+  });
+
+  describe('the scheme-wise return', () => {
+    /**
+     * The adoption argument, tested. An officer compiles this by hand every
+     * month; if a teacher's three taps on the activity form do not produce it,
+     * the officer has no reason to want the platform used and the whole thing
+     * stays a showcase nobody opens twice.
+     */
+    it('turns the tags teachers apply into the report an officer files', async () => {
+      await publishActivity({
+        visibility: 'BLOCK',
+        schemes: ['NIPUN_BHARAT'],
+        title: 'Reading drill',
+      });
+      await publishActivity({
+        visibility: 'BLOCK',
+        schemes: ['NIPUN_BHARAT', 'PM_POSHAN'],
+        title: 'Garden lesson',
+      });
+      await publishActivity({
+        visibility: 'BLOCK',
+        schemes: ['KAYAKALP'],
+        title: 'Classroom repaired',
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/reports/schemes',
+        headers: auth(districtAdmin),
+      });
+      expect(response.statusCode).toBe(200);
+      const body = response.json() as {
+        rows: Array<{ scheme: string; activities: number; childParticipations: number }>;
+      };
+
+      const nipun = body.rows.find((row) => row.scheme === 'NIPUN_BHARAT');
+      expect(nipun?.activities).toBe(2);
+      // 28 children on each of the two, summed rather than deduplicated.
+      expect(nipun?.childParticipations).toBe(56);
+
+      // Busiest programme first, because that is the officer's summary line.
+      expect(body.rows[0]?.scheme).toBe('NIPUN_BHARAT');
+      expect(body.rows.map((row) => row.scheme)).toContain('KAYAKALP');
+    });
+
+    it('counts untagged work under NONE rather than dropping it', async () => {
+      // An officer who notices the scheme report disagreeing with the totals on
+      // the overview screen stops trusting both.
+      await publishActivity({ visibility: 'BLOCK', title: 'An untagged write-up' });
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/reports/schemes',
+        headers: auth(districtAdmin),
+      });
+      const rows = (response.json() as { rows: Array<{ scheme: string; activities: number }> })
+        .rows;
+      expect(rows.find((row) => row.scheme === 'NONE')?.activities).toBe(1);
+    });
+
+    it('hands the officer a CSV, which is what actually gets forwarded', async () => {
+      await publishActivity({ visibility: 'BLOCK', schemes: ['MISSION_SHAKTI'] });
+      const response = await app.inject({
+        method: 'GET',
+        url: '/v1/reports/schemes.csv',
+        headers: auth(districtAdmin),
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['content-type']).toContain('text/csv');
+      expect(response.body).toContain('MISSION_SHAKTI');
+      expect(response.body).toContain('Programme');
     });
   });
 });

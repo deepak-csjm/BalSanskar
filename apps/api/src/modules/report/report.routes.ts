@@ -11,7 +11,13 @@ import { getPrisma } from '../../lib/prisma.js';
 import { parseOrThrow, decodeCursor, paginate } from '../../lib/validate.js';
 import { recordAudit } from '../../lib/audit.js';
 import { resolveScopeFilter } from '../../lib/scope.js';
-import { buildLeaderboard, buildOverview, findDormantSchools, toCsv } from './report.service.js';
+import {
+  buildLeaderboard,
+  buildOverview,
+  buildSchemeReport,
+  findDormantSchools,
+  toCsv,
+} from './report.service.js';
 
 export const reportRoutes: FastifyPluginAsync = async (app) => {
   const prisma = getPrisma();
@@ -137,5 +143,42 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
       })),
       nextCursor: page.nextCursor,
     });
+  });
+
+  /**
+   * The block office's monthly scheme-wise return.
+   *
+   * The reason an officer wants the platform used at all: this is a report they
+   * already compile by hand every month, and here it is a query.
+   */
+  app.get('/reports/schemes', { preHandler: app.requireAuth }, async (request, reply) => {
+    const actor = request.requirePermission('report:read');
+    const query = parseOrThrow(reportQuerySchema, request.query);
+    return reply.send(await buildSchemeReport(prisma, actor, query));
+  });
+
+  app.get('/reports/schemes.csv', { preHandler: app.requireAuth }, async (request, reply) => {
+    const actor = request.requirePermission('report:export');
+    const query = parseOrThrow(reportQuerySchema, request.query);
+    const report = await buildSchemeReport(prisma, actor, query);
+
+    const csv = toCsv(
+      ['Programme', 'Activities', 'Schools', 'Child participations', 'Cleared by the block'],
+      report.rows.map((row) => [
+        row.scheme,
+        row.activities,
+        row.schools,
+        row.childParticipations,
+        row.cleared,
+      ]),
+    );
+
+    return reply
+      .header('content-type', 'text/csv; charset=utf-8')
+      .header(
+        'content-disposition',
+        `attachment; filename="balsanskar-schemes-${report.scope.from}-to-${report.scope.to}.csv"`,
+      )
+      .send(csv);
   });
 };

@@ -24,13 +24,16 @@ export const reportQuerySchema = z
   });
 export type ReportQuery = z.infer<typeof reportQuerySchema>;
 
+export const reportScopeSchema = z.object({
+  level: z.enum(['STATE', 'DISTRICT', 'BLOCK', 'SCHOOL']),
+  name: z.string(),
+  from: z.string(),
+  to: z.string(),
+});
+export type ReportScope = z.infer<typeof reportScopeSchema>;
+
 export const overviewReportSchema = z.object({
-  scope: z.object({
-    level: z.enum(['STATE', 'DISTRICT', 'BLOCK', 'SCHOOL']),
-    name: z.string(),
-    from: z.string(),
-    to: z.string(),
-  }),
+  scope: reportScopeSchema,
   totals: z.object({
     schools: z.number().int(),
     /** Schools that published at least one activity in the window. */
@@ -112,3 +115,31 @@ export const dormantSchoolsQuerySchema = reportQuerySchema.and(
   z.object({ limit: z.coerce.number().int().min(1).max(500).default(100) }),
 );
 export type DormantSchoolsQuery = z.infer<typeof dormantSchoolsQuerySchema>;
+
+/**
+ * The block office's monthly scheme-wise return, assembled rather than typed.
+ *
+ * This is the adoption hinge. An officer already compiles exactly this every
+ * month, by hand, out of a register and a WhatsApp album; producing it from
+ * work teachers have already logged is what makes the officer want the platform
+ * used, which is what gets it used. A showcase alone gives nobody in the chain
+ * a reason to open it twice.
+ */
+export const schemeReportRowSchema = z.object({
+  scheme: z.string(),
+  activities: z.number().int(),
+  schools: z.number().int(),
+  /** Summed from what each activity reported. Never distinct children. */
+  childParticipations: z.number().int(),
+  /** Of those activities, how many a block officer has actually cleared. */
+  cleared: z.number().int(),
+});
+export type SchemeReportRow = z.infer<typeof schemeReportRowSchema>;
+
+export const schemeReportSchema = z.object({
+  scope: reportScopeSchema,
+  rows: z.array(schemeReportRowSchema),
+  /** Schools that logged nothing against any programme in the window. */
+  schoolsWithNothingLogged: z.number().int(),
+});
+export type SchemeReport = z.infer<typeof schemeReportSchema>;
