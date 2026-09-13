@@ -1,7 +1,10 @@
 import type { PrismaClient } from '@prisma/client';
 import {
   ALLOWED_DOCUMENT_TYPES,
+  MAX_MEDIA_PER_SCHOOL_PER_MONTH,
   MAX_UPLOAD_BYTES,
+  MEDIA_RETENTION_DAYS,
+  ORPHAN_UPLOAD_HOURS,
   type RequestUploadInput,
   type UploadTicket,
 } from '@balsanskar/shared';
@@ -38,6 +41,23 @@ export async function createUploadTicket(
   if (!actor.schoolId && actor.role !== 'SUPER_ADMIN' && actor.role !== 'STATE_ADMIN') {
     // District and block officers upload against a school context, not their own.
     if (!actor.districtId) throw forbidden('This account cannot upload files');
+  }
+
+  // A monthly ceiling per school, well above what an active school files. It
+  // is here so that one misconfigured script cannot put a district's storage
+  // bill on the platform in an afternoon — not to ration honest work.
+  if (actor.schoolId) {
+    const monthAgo = new Date(Date.now() - 30 * 86_400_000);
+    const thisMonth = await prisma.mediaAsset.count({
+      where: { schoolId: actor.schoolId, createdAt: { gte: monthAgo } },
+    });
+    if (thisMonth >= MAX_MEDIA_PER_SCHOOL_PER_MONTH) {
+      throw new AppError(
+        429,
+        ERROR_CODES.RATE_LIMITED,
+        `This school has added ${MAX_MEDIA_PER_SCHOOL_PER_MONTH} photographs in the last month, which is the limit. Please try again in a few days, or speak to the block office.`,
+      );
+    }
   }
 
   const isDocument = (ALLOWED_DOCUMENT_TYPES as readonly string[]).includes(input.contentType);
@@ -99,7 +119,7 @@ export async function createUploadTicket(
  */
 export async function sweepOrphanedUploads(
   prisma: PrismaClient,
-  olderThanHours = 24,
+  olderThanHours = ORPHAN_UPLOAD_HOURS,
 ): Promise<{ deleted: number }> {
   const cutoff = new Date(Date.now() - olderThanHours * 3_600_000);
   const orphans = await prisma.mediaAsset.findMany({
@@ -117,6 +137,45 @@ export async function sweepOrphanedUploads(
       deleted += 1;
     } catch {
       // A file that has already gone is fine; anything else is retried next run.
+    }
+  }
+  return { deleted };
+}
+
+/**
+ * Deletes photographs that have outlived their activity.
+ *
+ * The largest lever on running cost and the one that keeps it predictable:
+ * uploads grow the store, this shrinks it, and after one retention window the
+ * two cancel and the bill stops climbing. It is also plain data minimisation —
+ * the department's need is to see the work at the time and count it afterwards,
+ * and the counts are in the activity record, not in the image.
+ *
+ * The activity, its write-up, its risk assessment and its clearance trail all
+ * survive. Only the pictures go.
+ */
+export async function expireOldMedia(
+  prisma: PrismaClient,
+  retentionDays = MEDIA_RETENTION_DAYS,
+): Promise<{ deleted: number }> {
+  const cutoff = new Date(Date.now() - retentionDays * 86_400_000);
+  const expired = await prisma.mediaAsset.findMany({
+    where: { attachedAt: { not: null, lt: cutoff } },
+    select: { id: true, storageKey: true },
+    take: 500,
+  });
+
+  const storage = getStorage();
+  let deleted = 0;
+  for (const asset of expired) {
+    try {
+      await storage.delete(asset.storageKey);
+      // The join row goes with it; the activity itself is untouched.
+      await prisma.activityMedia.deleteMany({ where: { assetId: asset.id } });
+      await prisma.mediaAsset.delete({ where: { id: asset.id } });
+      deleted += 1;
+    } catch {
+      // A file already gone is fine; anything else is retried next run.
     }
   }
   return { deleted };

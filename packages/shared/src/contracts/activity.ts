@@ -8,6 +8,7 @@ import {
 } from '../enums.js';
 import { CLEARANCE_STATES } from '../integrity.js';
 import { MAX_SCHEMES_PER_ACTIVITY, SCHEMES } from '../schemes.js';
+import { MAX_MEDIA_PER_ACTIVITY, MAX_UPLOAD_BYTES } from '../retention.js';
 import {
   cleanMultilineText,
   cleanText,
@@ -43,7 +44,7 @@ export const createActivitySchema = z.object({
    */
   schemes: z.array(z.enum(SCHEMES)).max(MAX_SCHEMES_PER_ACTIVITY).default([]),
   /** Storage keys returned by the upload endpoint, in display order. */
-  mediaKeys: z.array(z.string().trim().min(1).max(300)).max(10).default([]),
+  mediaKeys: z.array(z.string().trim().min(1).max(300)).max(MAX_MEDIA_PER_ACTIVITY).default([]),
   tags: z.array(cleanText(2, 30)).max(8).default([]),
   learningOutcome: cleanMultilineText(0, 1000).optional(),
 });
@@ -222,7 +223,6 @@ export const appreciationSchema = z.object({
 });
 export type Appreciation = z.infer<typeof appreciationSchema>;
 
-export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 export const ALLOWED_DOCUMENT_TYPES = ['application/pdf'] as const;
 

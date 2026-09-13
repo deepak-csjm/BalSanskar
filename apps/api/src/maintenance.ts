@@ -1,7 +1,7 @@
 import { getConfig } from './config.js';
 import { disconnectPrisma, getPrisma } from './lib/prisma.js';
 import { expireStaleClaims } from './modules/org/claim.service.js';
-import { sweepOrphanedUploads } from './modules/activity/media.service.js';
+import { expireOldMedia, sweepOrphanedUploads } from './modules/activity/media.service.js';
 
 /**
  * The housekeeping that has to happen on a clock.
@@ -40,6 +40,16 @@ async function main(): Promise<void> {
   const uploads = await sweepOrphanedUploads(prisma);
 
   /**
+   * Photographs that have outlived the activity they belong to.
+   *
+   * The largest lever on running cost and the one that makes it predictable:
+   * uploads grow the store, this shrinks it, and after one retention window
+   * they cancel. Also plain data minimisation — the counts survive in the
+   * activity record, only the images go.
+   */
+  const expired = await expireOldMedia(prisma);
+
+  /**
    * Claims nobody answered.
    *
    * The claim endpoint retires a stale claim on the way past, so a school is
@@ -53,6 +63,7 @@ async function main(): Promise<void> {
     JSON.stringify({
       task: 'maintenance',
       orphanedUploadsDeleted: uploads.deleted,
+      expiredMediaDeleted: expired.deleted,
       staleClaimsExpired: claims.expired,
       durationMs: Date.now() - started,
     }),

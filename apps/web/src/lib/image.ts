@@ -18,9 +18,19 @@ export interface CompressOptions {
   maxBytes?: number;
 }
 
+/**
+ * Sized for what these photographs are actually for: a kitchen garden or a
+ * reading corner, looked at on a phone or in a dashboard panel, never printed.
+ *
+ * 1280px at this quality lands around 150 KB. That is half what 1600px at 0.82
+ * produced, which at state scale is the difference between a storage bill of a
+ * few thousand rupees a month and a few tens of thousands — and nobody can tell
+ * the two images apart on the screens either will ever be seen on. It is also
+ * half the data out of a teacher's own pocket on the way up.
+ */
 const DEFAULTS: Required<CompressOptions> = {
-  maxDimension: 1600,
-  quality: 0.82,
+  maxDimension: 1280,
+  quality: 0.75,
   maxBytes: 1024 * 1024,
 };
 
