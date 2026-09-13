@@ -292,10 +292,10 @@ model School {
   status SchoolStatus @default(ACTIVE)
 
   /// Drives how much of this school's escalated work a block officer sees.
-  trustTier TrustTier @default(NEW)
+  trustTier      TrustTier @default(NEW)
   /// Counters behind the tier, maintained when an activity clears or returns.
-  clearedCount  Int       @default(0)
-  returnedCount Int       @default(0)
+  clearedCount   Int       @default(0)
+  returnedCount  Int       @default(0)
   lastReturnedAt DateTime?
 
   users        User[]
@@ -324,9 +324,9 @@ model School {
 /// Handling money would bring payment regulation, an audit duty, and — far
 /// worse for a school — the suspicion that somebody is collecting.
 model SchoolNeed {
-  id       String     @id @default(cuid())
-  schoolId String
-  school   School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  schoolId   String
+  school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   blockId    String
   block      Block    @relation(fields: [blockId], references: [id], onDelete: Restrict)
   districtId String
@@ -364,20 +364,32 @@ model SchoolNeed {
 /// authority is already public; its members' identities are not this platform's
 /// to publish.
 model SmcMeeting {
-  id       String @id @default(cuid())
-  schoolId String
-  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  schoolId   String
+  school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   blockId    String
   block      Block    @relation(fields: [blockId], references: [id], onDelete: Restrict)
   districtId String
   district   District @relation(fields: [districtId], references: [id], onDelete: Restrict)
 
-  heldOn         DateTime @db.Date
-  membersPresent Int
-  parentsPresent Int
-  womenPresent   Int
-  decisions      String
+  heldOn          DateTime @db.Date
+  membersPresent  Int
+  parentsPresent  Int
+  womenPresent    Int
+  decisions       String
   raisedWithBlock String?
+
+  /// The block's answer to what the committee raised.
+  ///
+  /// Without these, `raisedWithBlock` is a wish sent into a void: the committee
+  /// records what it asked for and nothing in the system can ever say the ask
+  /// was met, refused or read. A clock that cannot be stopped is not
+  /// accountability, it is a grievance counter — so the office that owes the
+  /// answer gets a way to give one, in writing, attributed.
+  answeredById String?
+  answeredBy   User?     @relation("SmcAnsweredBy", fields: [answeredById], references: [id], onDelete: SetNull)
+  answeredAt   DateTime?
+  answerNote   String?
 
   recordedById String
   recordedBy   User   @relation("SmcRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
@@ -386,6 +398,9 @@ model SmcMeeting {
 
   @@index([schoolId, heldOn])
   @@index([blockId, heldOn])
+  /// The block's outstanding list: what a committee asked for and nobody has
+  /// answered yet, oldest first.
+  @@index([blockId, answeredAt])
   @@map("smc_meetings")
 }
 
@@ -397,9 +412,9 @@ model SmcMeeting {
 /// which hamlets have been walked and whether anybody went back, and that is
 /// exactly what a count answers.
 model HabitationSurvey {
-  id       String @id @default(cuid())
-  schoolId String
-  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  schoolId   String
+  school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   blockId    String
   block      Block    @relation(fields: [blockId], references: [id], onDelete: Restrict)
   districtId String
@@ -513,10 +528,10 @@ model SchoolClaim {
 // ---------------------------------------------------------------------------
 
 model User {
-  id     String     @id @default(cuid())
+  id           String     @id @default(cuid())
   /// E.164, always +91XXXXXXXXXX. Doubles as the login identifier for teachers.
-  phone  String     @unique
-  email  String?    @unique
+  phone        String     @unique
+  email        String?    @unique
   /// scrypt hash. Null for teachers, who authenticate by one-time code only.
   passwordHash String?
   fullName     String
@@ -534,29 +549,30 @@ model User {
   districtId String?
   district   District? @relation(fields: [districtId], references: [id], onDelete: Restrict)
 
-  approvedById String?
-  approvedBy   User?   @relation("UserApprovals", fields: [approvedById], references: [id], onDelete: SetNull)
-  approvedUsers User[] @relation("UserApprovals")
-  approvedAt   DateTime?
-  statusReason String?
+  approvedById  String?
+  approvedBy    User?     @relation("UserApprovals", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedUsers User[]    @relation("UserApprovals")
+  approvedAt    DateTime?
+  statusReason  String?
 
-  lastLoginAt DateTime?
+  lastLoginAt     DateTime?
   /// Set when an administrator creates the account, cleared once the user picks
   /// their own password.
-  mustSetPassword Boolean @default(false)
+  mustSetPassword Boolean   @default(false)
 
-  authoredActivities   Activity[]    @relation("ActivityAuthor")
-  reviewedActivities   Activity[]    @relation("ActivityReviewer")
-  attestedActivities   Activity[]    @relation("ActivityAttestor")
-  clearedActivities    Activity[]    @relation("ActivityClearance")
-  reviewedClaims       SchoolClaim[] @relation("ClaimReviewer")
-  updatedEnrolments    ClassEnrolment[] @relation("EnrolmentUpdatedBy")
-  createdNeeds         SchoolNeed[]     @relation("NeedCreatedBy")
-  recordedSmcMeetings  SmcMeeting[]     @relation("SmcRecordedBy")
+  authoredActivities   Activity[]         @relation("ActivityAuthor")
+  reviewedActivities   Activity[]         @relation("ActivityReviewer")
+  attestedActivities   Activity[]         @relation("ActivityAttestor")
+  clearedActivities    Activity[]         @relation("ActivityClearance")
+  reviewedClaims       SchoolClaim[]      @relation("ClaimReviewer")
+  updatedEnrolments    ClassEnrolment[]   @relation("EnrolmentUpdatedBy")
+  createdNeeds         SchoolNeed[]       @relation("NeedCreatedBy")
+  recordedSmcMeetings  SmcMeeting[]       @relation("SmcRecordedBy")
+  answeredSmcMeetings  SmcMeeting[]       @relation("SmcAnsweredBy")
   recordedSurveys      HabitationSurvey[] @relation("SurveyRecordedBy")
-  creditedAchievements Achievement[] @relation("AchievementCredited")
-  createdAchievements  Achievement[] @relation("AchievementCreatedBy")
-  verifiedAchievements Achievement[] @relation("AchievementVerifiedBy")
+  creditedAchievements Achievement[]      @relation("AchievementCredited")
+  createdAchievements  Achievement[]      @relation("AchievementCreatedBy")
+  verifiedAchievements Achievement[]      @relation("AchievementVerifiedBy")
   appreciations        Appreciation[]
   refreshTokens        RefreshToken[]
   auditEvents          AuditEvent[]
@@ -577,15 +593,15 @@ model User {
 /// The code itself is never stored; only a salted hash. Rows are kept after use
 /// so that resend throttling and abuse investigation have something to read.
 model OtpChallenge {
-  id          String     @id @default(cuid())
-  phone       String
-  codeHash    String
-  purpose     OtpPurpose
-  attempts    Int        @default(0)
-  expiresAt   DateTime
-  consumedAt  DateTime?
-  requestIp   String?
-  createdAt   DateTime   @default(now())
+  id         String     @id @default(cuid())
+  phone      String
+  codeHash   String
+  purpose    OtpPurpose
+  attempts   Int        @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  requestIp  String?
+  createdAt  DateTime   @default(now())
 
   @@index([phone, purpose, createdAt])
   @@index([expiresAt])
@@ -625,13 +641,13 @@ model RefreshToken {
 // ---------------------------------------------------------------------------
 
 model Activity {
-  id          String           @id @default(cuid())
-  schoolId    String
-  school      School           @relation(fields: [schoolId], references: [id], onDelete: Restrict)
-  blockId     String
-  block       Block            @relation(fields: [blockId], references: [id], onDelete: Restrict)
-  districtId  String
-  district    District         @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  id         String   @id @default(cuid())
+  schoolId   String
+  school     School   @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  blockId    String
+  block      Block    @relation(fields: [blockId], references: [id], onDelete: Restrict)
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Restrict)
 
   authorId String
   author   User   @relation("ActivityAuthor", fields: [authorId], references: [id], onDelete: Restrict)
@@ -646,7 +662,7 @@ model Activity {
   tags             String[]
   /// The government programmes this work counts towards, so a block officer's
   /// monthly scheme-wise return assembles itself instead of being typed up.
-  schemes          Scheme[]  @default([])
+  schemes          Scheme[]         @default([])
 
   status              ActivityStatus   @default(DRAFT)
   visibility          VisibilityLevel  @default(SCHOOL)
@@ -666,17 +682,17 @@ model Activity {
   /// The head teacher's named, dated statement that this happened and that the
   /// consent slips are on file. Not a checkbox: it is stored and shown to the
   /// block officer alongside the activity.
-  attestedById String?
-  attestedBy   User?     @relation("ActivityAttestor", fields: [attestedById], references: [id], onDelete: SetNull)
-  attestedAt   DateTime?
+  attestedById    String?
+  attestedBy      User?     @relation("ActivityAttestor", fields: [attestedById], references: [id], onDelete: SetNull)
+  attestedAt      DateTime?
   attestationNote String?
 
-  clearance ClearanceState @default(NOT_REQUIRED)
+  clearance       ClearanceState   @default(NOT_REQUIRED)
   /// Where the activity is trying to get to. `visibility` is what it has
   /// actually been granted, and never exceeds what has been cleared.
   clearanceTarget VisibilityLevel?
   clearedById     String?
-  clearedBy       User?     @relation("ActivityClearance", fields: [clearedById], references: [id], onDelete: SetNull)
+  clearedBy       User?            @relation("ActivityClearance", fields: [clearedById], references: [id], onDelete: SetNull)
   clearedAt       DateTime?
   clearanceNote   String?
 
@@ -689,8 +705,8 @@ model Activity {
   /// date, the count, the earlier activity — survive to the queue.
   riskNotes String[] @default([])
 
-  media             ActivityMedia[]
-  appreciations     Appreciation[]
+  media         ActivityMedia[]
+  appreciations Appreciation[]
 
   appreciationCount Int @default(0)
 
@@ -713,21 +729,21 @@ model Activity {
 /// An asset exists from the moment an upload ticket is issued, which means an
 /// orphaned upload is visible and sweepable rather than invisible and permanent.
 model MediaAsset {
-  id          String    @id @default(cuid())
-  storageKey  String    @unique
-  kind        MediaKind
-  contentType String
-  sizeBytes   Int
-  width       Int?
-  height      Int?
-  checksum    String?
+  id             String    @id @default(cuid())
+  storageKey     String    @unique
+  kind           MediaKind
+  contentType    String
+  sizeBytes      Int
+  width          Int?
+  height         Int?
+  checksum       String?
   /// 64-bit difference hash of the image, as 16 hex characters, computed in the
   /// browser before upload. Survives re-compression and resizing, which is what
   /// makes it useful for catching a recycled photograph. Not a security hash.
   perceptualHash String?
 
   uploadedById String
-  uploadedBy   User   @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  uploadedBy   User    @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
   /// Scope of the upload, used to keep one school's files out of another's reach.
   schoolId     String?
 
@@ -789,20 +805,20 @@ model Appreciation {
 }
 
 model Achievement {
-  id         String     @id @default(cuid())
+  id                 String     @id @default(cuid())
   /// The class the recognised children were in. Never who they were.
-  classLevel ClassLevel
+  classLevel         ClassLevel
   /// How many children from this school were recognised. Usually one.
-  childrenRecognised Int @default(1)
+  childrenRecognised Int        @default(1)
   /// The teacher who guided it, because somebody did.
-  creditedTeacherId String?
-  creditedTeacher   User?   @relation("AchievementCredited", fields: [creditedTeacherId], references: [id], onDelete: SetNull)
-  schoolId   String
-  school     School   @relation(fields: [schoolId], references: [id], onDelete: Restrict)
-  blockId    String
-  block      Block    @relation(fields: [blockId], references: [id], onDelete: Restrict)
-  districtId String
-  district   District @relation(fields: [districtId], references: [id], onDelete: Restrict)
+  creditedTeacherId  String?
+  creditedTeacher    User?      @relation("AchievementCredited", fields: [creditedTeacherId], references: [id], onDelete: SetNull)
+  schoolId           String
+  school             School     @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  blockId            String
+  block              Block      @relation(fields: [blockId], references: [id], onDelete: Restrict)
+  districtId         String
+  district           District   @relation(fields: [districtId], references: [id], onDelete: Restrict)
 
   category    AchievementCategory
   level       AchievementLevel

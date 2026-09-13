@@ -44,6 +44,10 @@ export function Shell() {
       <nav className="tabbar" aria-label={t('app.name')}>
         <Tab to="/app" icon="🏠" label={t('nav.home')} end />
         <Tab to="/app/activities" icon="📋" label={t('nav.activities')} />
+        {/* Placed second, ahead of every officer tool: the screen that tells
+            a teacher somebody else owes them something is the one that makes
+            this platform theirs rather than another thing measuring them. */}
+        <Tab to="/app/waiting" icon="⏳" label={t('nav.waiting')} />
         {may('enrolment:write') ? (
           <Tab to="/app/enrolment" icon="🔢" label={t('nav.enrolment')} />
         ) : null}

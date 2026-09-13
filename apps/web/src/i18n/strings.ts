@@ -377,6 +377,30 @@ export const strings = {
     'promise.freeForTeachersAndFamilies.why':
       'इस मंच पर किसी शिक्षक, विद्यालय, अभिभावक या गाँव से कभी कोई शुल्क नहीं लिया जाता।',
 
+    // Who is holding this. The one screen whose whole purpose is to tell a
+    // teacher that somebody else owes them something.
+    'nav.waiting': 'लंबित',
+    'waiting.title': 'किसके पास है',
+    'waiting.intro':
+      'आपका जो काम आगे नहीं बढ़ा, वह किस कार्यालय के पास है और कितने दिनों से। यह घड़ी उस कार्यालय की है जिसे उत्तर देना है — आपकी नहीं।',
+    'waiting.owedByYou': 'आपके कार्यालय के पास',
+    'waiting.nothing': 'कुछ भी लंबित नहीं है।',
+    'waiting.days': 'दिन से',
+    'waiting.overdue': 'सामान्य से अधिक समय',
+    'waiting.oldest': 'सबसे पुराना',
+    'waiting.stage.HEAD_TEACHER': 'प्रधानाध्यापक',
+    'waiting.stage.BLOCK_OFFICE': 'खंड कार्यालय',
+    'waiting.stage.DISTRICT_OFFICE': 'जनपद कार्यालय',
+    'waiting.kind.ACTIVITY': 'गतिविधि',
+    'waiting.kind.SCHOOL_CLAIM': 'विद्यालय का दावा',
+    'waiting.kind.SMC_REQUEST': 'प्रबंध समिति की माँग',
+    'waiting.answer': 'उत्तर दीजिए',
+    'waiting.answerLabel': 'खंड कार्यालय का उत्तर',
+    'waiting.answerHint': 'समिति को यह उत्तर आपके नाम के साथ दिखेगा।',
+    'waiting.answered': 'उत्तर दर्ज हो गया।',
+    'waiting.noPenalty':
+      'देर होना केवल देर होना है। यहाँ से न कोई सूचना जाती है, न कोई कार्रवाई होती है, न यह किसी रिपोर्ट में गिना जाता है।',
+
     loading: 'लोड हो रहा है…',
   },
 
@@ -744,6 +768,28 @@ export const strings = {
       'Free for you, for your school, and for every family. Always.',
     'promise.freeForTeachersAndFamilies.why':
       'Nothing on this platform is ever charged to a teacher, a school, a parent or a village.',
+
+    'nav.waiting': 'Waiting',
+    'waiting.title': 'Who is holding this',
+    'waiting.intro':
+      'Work of yours that has not moved, which office is holding it, and for how long. The clock belongs to whoever owes the answer — not to you.',
+    'waiting.owedByYou': 'Waiting on your office',
+    'waiting.nothing': 'Nothing is waiting.',
+    'waiting.days': 'days',
+    'waiting.overdue': 'Longer than usual',
+    'waiting.oldest': 'Oldest',
+    'waiting.stage.HEAD_TEACHER': 'Head teacher',
+    'waiting.stage.BLOCK_OFFICE': 'Block office',
+    'waiting.stage.DISTRICT_OFFICE': 'District office',
+    'waiting.kind.ACTIVITY': 'Activity',
+    'waiting.kind.SCHOOL_CLAIM': 'School claim',
+    'waiting.kind.SMC_REQUEST': 'Committee request',
+    'waiting.answer': 'Answer',
+    'waiting.answerLabel': 'The block office\u2019s answer',
+    'waiting.answerHint': 'The committee will see this answer with your name on it.',
+    'waiting.answered': 'Answer recorded.',
+    'waiting.noPenalty':
+      'Late is only late. Nothing here sends a notice, triggers an action, or counts towards any report.',
 
     loading: 'Loading…',
   },
