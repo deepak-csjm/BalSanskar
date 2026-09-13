@@ -144,6 +144,23 @@ node apps/api/dist/maintenance.js                # from a build
 Both jobs are idempotent and only touch rows already past their deadline, so a
 run overlapping the previous one is harmless.
 
+### Looking at it without running it
+
+Every screen is captured and committed under
+[`docs/screens/`](docs/screens/) — Hindi at phone width, which is the real
+product, and English at desktop width, which is what goes in a slide. Open the
+folder and you have reviewed the whole application.
+
+```bash
+pnpm exec playwright install chromium   # once
+pnpm dev                                # in another terminal
+pnpm shots                              # regenerates docs/screens/
+```
+
+The script signs in as each role, creates something for every screen to show
+through the real endpoints, and photographs the lot. Because the images are
+committed, a change that moves something appears in a diff.
+
 ### Checks
 
 ```bash
