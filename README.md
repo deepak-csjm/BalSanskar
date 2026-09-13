@@ -28,6 +28,29 @@ a named officer with oversight, and it is recorded as such.
 
 ---
 
+## Who this is for
+
+A school works when more than the teachers are involved, and the Right to
+Education Act already says so — it puts a committee in charge of every
+government school that is three-quarters parents and half women. So the platform
+has two sides.
+
+**Inside the department**, a chain that runs teacher → head teacher → block →
+district, with a real gate on work leaving a school and a monthly scheme-wise
+return that assembles itself instead of being typed up.
+
+**In the village**, a page behind a QR code on the school wall at
+`/vidyalaya/<UDISE code>` that needs no account at all: what the school has been
+doing, how many children it teaches, what it needs that somebody nearby could
+give, whether its committee actually met, and how many children in the
+surrounding hamlets are still not in school. A parent will not register to look
+at their child's school; asking them to is the difference between a noticeboard
+the village reads and one nobody opens.
+
+[`docs/launch-readiness.md`](docs/launch-readiness.md) is the checklist against
+everyone who could refuse this — the Data Protection Board, MeitY, a teachers'
+association, a block officer, a parent — with what is done and what is not.
+
 ## The one rule that shapes everything else
 
 **This platform holds no personal data about any child.** Not a name, not a
