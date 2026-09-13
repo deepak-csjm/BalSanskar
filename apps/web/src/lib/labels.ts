@@ -2,6 +2,7 @@ import type {
   AchievementCategory,
   AchievementLevel,
   ActivityCategory,
+  NeedKind,
   RiskFlag,
   Scheme,
   SchoolType,
@@ -91,6 +92,32 @@ export const ACHIEVEMENT_LEVEL_LABELS: Record<'hi' | 'en', Record<AchievementLev
     DISTRICT: 'District',
     STATE: 'State',
     NATIONAL: 'National',
+  },
+};
+
+/**
+ * The kinds of help a village can give a school.
+ *
+ * Deliberately mundane. What holds a rural school back is a broken hand pump,
+ * no fan in June and nobody to take a reading class — not anything a policy
+ * document would list.
+ */
+export const NEED_KIND_LABELS: Record<'hi' | 'en', Record<NeedKind, string>> = {
+  hi: {
+    MATERIAL: 'सामग्री',
+    REPAIR: 'मरम्मत',
+    VOLUNTEER_TIME: 'समय एवं सहयोग',
+    EVENT_SUPPORT: 'आयोजन में सहयोग',
+    ENROLMENT_HELP: 'नामांकन में सहयोग',
+    OTHER: 'अन्य',
+  },
+  en: {
+    MATERIAL: 'Materials',
+    REPAIR: 'A repair',
+    VOLUNTEER_TIME: 'Somebody’s time',
+    EVENT_SUPPORT: 'Help with an event',
+    ENROLMENT_HELP: 'Help with enrolment',
+    OTHER: 'Something else',
   },
 };
 

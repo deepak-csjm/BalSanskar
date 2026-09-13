@@ -759,3 +759,11 @@ td.num {
   grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
   gap: 0 var(--space-3);
 }
+
+/** One item on the village noticeboard: a need, or a piece of work. */
+.need {
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-sunk);
+}

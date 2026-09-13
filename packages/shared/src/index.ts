@@ -12,3 +12,4 @@ export * from './contracts/school-record.js';
 export * from './contracts/activity.js';
 export * from './contracts/report.js';
 export * from './contracts/onboarding.js';
+export * from './contracts/village.js';

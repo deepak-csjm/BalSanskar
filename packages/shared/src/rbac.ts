@@ -43,6 +43,14 @@ export const PERMISSIONS = [
    */
   'enrolment:write',
 
+  /**
+   * The village's side of the school: what it needs, whether its committee
+   * met, and which hamlets have been walked looking for children who are not
+   * in school. Held by school staff, because these are the school's own
+   * records — the village reads them without an account at all.
+   */
+  'village:write',
+
   // Work of the school
   'activity:create',
   'activity:read',
@@ -82,6 +90,7 @@ const TEACHER_PERMISSIONS: Permission[] = [
   'activity:read',
   'activity:update_own',
   'activity:submit',
+  'village:write',
   'achievement:read',
   'achievement:create',
   'report:read',

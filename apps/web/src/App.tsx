@@ -21,6 +21,9 @@ const Register = lazy(() => import('./pages/Register.js').then((m) => ({ default
 const ClaimSchool = lazy(() =>
   import('./pages/ClaimSchool.js').then((m) => ({ default: m.ClaimSchool })),
 );
+const VillageSchool = lazy(() =>
+  import('./pages/VillageSchool.js').then((m) => ({ default: m.VillageSchool })),
+);
 const Showcase = lazy(() => import('./pages/Showcase.js').then((m) => ({ default: m.Showcase })));
 const Activities = lazy(() =>
   import('./pages/Activities.js').then((m) => ({ default: m.Activities })),
@@ -55,6 +58,9 @@ export function App() {
               <Route path="/signin" element={<SignIn />} />
               <Route path="/register" element={<Register />} />
               <Route path="/claim" element={<ClaimSchool />} />
+              {/* The QR code on the school wall. Addressed by the UDISE code
+                  because that is already painted on the building. */}
+              <Route path="/vidyalaya/:udiseCode" element={<VillageSchool />} />
               <Route path="/showcase" element={<Showcase />} />
 
               <Route

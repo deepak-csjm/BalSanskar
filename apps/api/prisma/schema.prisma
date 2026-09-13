@@ -135,6 +135,32 @@ enum Scheme {
   NONE
 }
 
+/// What a village can actually give a school. See contracts/village.ts.
+enum NeedKind {
+  MATERIAL
+  REPAIR
+  VOLUNTEER_TIME
+  EVENT_SUPPORT
+  ENROLMENT_HELP
+  OTHER
+}
+
+enum NeedStatus {
+  OPEN
+  PROMISED
+  MET
+  WITHDRAWN
+}
+
+enum HabitationKind {
+  VILLAGE
+  HAMLET
+  WARD
+  WORKSITE
+  MIGRANT_SETTLEMENT
+  OTHER
+}
+
 enum MediaKind {
   IMAGE
   DOCUMENT
@@ -204,6 +230,9 @@ model District {
   users        User[]
   activities   Activity[]
   achievements Achievement[]
+  needs        SchoolNeed[]
+  smcMeetings  SmcMeeting[]
+  surveys      HabitationSurvey[]
   claims       SchoolClaim[]
 
   createdAt DateTime @default(now())
@@ -225,6 +254,9 @@ model Block {
   users        User[]
   activities   Activity[]
   achievements Achievement[]
+  needs        SchoolNeed[]
+  smcMeetings  SmcMeeting[]
+  surveys      HabitationSurvey[]
   claims       SchoolClaim[]
 
   createdAt DateTime @default(now())
@@ -268,6 +300,9 @@ model School {
 
   users        User[]
   enrolments   ClassEnrolment[]
+  needs        SchoolNeed[]
+  smcMeetings  SmcMeeting[]
+  surveys      HabitationSurvey[]
   activities   Activity[]
   achievements Achievement[]
   claims       SchoolClaim[]
@@ -280,6 +315,117 @@ model School {
   @@index([nameHi])
   @@index([status])
   @@map("schools")
+}
+
+/// Something the school needs that a village could provide.
+///
+/// No money passes through the platform and no amount is ever recorded: a need
+/// is met when the head teacher says somebody turned up and did the thing.
+/// Handling money would bring payment regulation, an audit duty, and — far
+/// worse for a school — the suspicion that somebody is collecting.
+model SchoolNeed {
+  id       String     @id @default(cuid())
+  schoolId String
+  school   School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  blockId    String
+  block      Block    @relation(fields: [blockId], references: [id], onDelete: Restrict)
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Restrict)
+
+  kind        NeedKind
+  status      NeedStatus   @default(OPEN)
+  title       String
+  detail      String?
+  quantity    Int?
+  classLevels ClassLevel[]
+
+  /// How the helper chose to be named, typed by the head teacher after a
+  /// conversation. Not an account and never a contact detail: this platform is
+  /// not a directory of villagers and must not become one.
+  helperCredit String?
+  metOn        DateTime? @db.Date
+
+  createdById String
+  createdBy   User   @relation("NeedCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([schoolId, status])
+  @@index([blockId, status])
+  @@index([districtId, status])
+  @@map("school_needs")
+}
+
+/// A meeting of the School Management Committee, which the RTE Act requires
+/// every government school to have and which is three-quarters parents.
+///
+/// Counts of who attended rather than a list of who they were. The committee's
+/// authority is already public; its members' identities are not this platform's
+/// to publish.
+model SmcMeeting {
+  id       String @id @default(cuid())
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  blockId    String
+  block      Block    @relation(fields: [blockId], references: [id], onDelete: Restrict)
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Restrict)
+
+  heldOn         DateTime @db.Date
+  membersPresent Int
+  parentsPresent Int
+  womenPresent   Int
+  decisions      String
+  raisedWithBlock String?
+
+  recordedById String
+  recordedBy   User   @relation("SmcRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@index([schoolId, heldOn])
+  @@index([blockId, heldOn])
+  @@map("smc_meetings")
+}
+
+/// A hamlet walked in search of children who are not in school.
+///
+/// Counts, never a child. The DPDP Act forbids tracking or monitoring a child
+/// outright and no consent unlocks it; the school already holds the names
+/// lawfully in the register it has always kept. What nobody can see today is
+/// which hamlets have been walked and whether anybody went back, and that is
+/// exactly what a count answers.
+model HabitationSurvey {
+  id       String @id @default(cuid())
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  blockId    String
+  block      Block    @relation(fields: [blockId], references: [id], onDelete: Restrict)
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Restrict)
+
+  habitationName    String
+  kind              HabitationKind @default(HAMLET)
+  surveyedOn        DateTime       @db.Date
+  householdsVisited Int
+  childrenFound     Int
+  childrenEnrolled  Int
+  /// Named because they are volunteering an afternoon and the credit is the
+  /// point — a hamlet nobody will own is a hamlet nobody surveys.
+  surveyedBy        String
+  note              String?
+
+  recordedById String
+  recordedBy   User   @relation("SurveyRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([schoolId, habitationName, surveyedOn])
+  @@index([blockId, surveyedOn])
+  @@index([districtId, surveyedOn])
+  @@map("habitation_surveys")
 }
 
 /// How many children are on the register in each class.
@@ -405,6 +551,9 @@ model User {
   clearedActivities    Activity[]    @relation("ActivityClearance")
   reviewedClaims       SchoolClaim[] @relation("ClaimReviewer")
   updatedEnrolments    ClassEnrolment[] @relation("EnrolmentUpdatedBy")
+  createdNeeds         SchoolNeed[]     @relation("NeedCreatedBy")
+  recordedSmcMeetings  SmcMeeting[]     @relation("SmcRecordedBy")
+  recordedSurveys      HabitationSurvey[] @relation("SurveyRecordedBy")
   creditedAchievements Achievement[] @relation("AchievementCredited")
   createdAchievements  Achievement[] @relation("AchievementCreatedBy")
   verifiedAchievements Achievement[] @relation("AchievementVerifiedBy")
@@ -538,7 +687,7 @@ model Activity {
   /// The sentences the assessment wrote, one per flag and in the same order.
   /// Stored rather than regenerated so the specifics an officer needs — the
   /// date, the count, the earlier activity — survive to the queue.
-  riskNotes String[]
+  riskNotes String[] @default([])
 
   media             ActivityMedia[]
   appreciations     Appreciation[]
