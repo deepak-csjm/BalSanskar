@@ -9,9 +9,8 @@ import { badRequest, forbidden, invalidState, notFound } from '../../lib/errors.
 import { decodeCursor, paginate } from '../../lib/validate.js';
 import { recordAudit, type AuditContext } from '../../lib/audit.js';
 import { resolveScopeFilter, type ScopeFilter } from '../../lib/scope.js';
-import { toApiClassLevel } from '../../lib/class-level.js';
+import { toApiClassLevel, toDbClassLevel } from '../../lib/class-level.js';
 import type { Actor } from '../../plugins/auth.js';
-import { loadStudentInScope } from './student.service.js';
 
 /**
  * Individual recognition for a child.
@@ -24,7 +23,7 @@ import { loadStudentInScope } from './student.service.js';
  */
 
 const achievementInclude = {
-  student: { select: { id: true, fullName: true, classLevel: true } },
+  creditedTeacher: { select: { fullName: true } },
   school: { select: { id: true, nameHi: true } },
   verifiedBy: { select: { fullName: true } },
 } satisfies Prisma.AchievementInclude;
@@ -34,9 +33,9 @@ type AchievementRow = Prisma.AchievementGetPayload<{ include: typeof achievement
 function toAchievement(row: AchievementRow): Achievement {
   return {
     id: row.id,
-    studentId: row.studentId,
-    studentName: row.student.fullName,
-    classLevel: toApiClassLevel(row.student.classLevel),
+    classLevel: toApiClassLevel(row.classLevel),
+    childrenRecognised: row.childrenRecognised,
+    creditedTeacherName: row.creditedTeacher?.fullName ?? null,
     schoolId: row.schoolId,
     schoolName: row.school.nameHi,
     category: row.category,
@@ -75,7 +74,7 @@ export async function listAchievements(
   const rows = await prisma.achievement.findMany({
     where: {
       ...scopeToWhere(scope),
-      ...(query.studentId ? { studentId: query.studentId } : {}),
+      ...(query.classLevel ? { classLevel: toDbClassLevel(query.classLevel) } : {}),
       ...(query.category ? { category: query.category } : {}),
       ...(query.level ? { level: query.level } : {}),
       ...(query.status ? { status: query.status } : {}),
@@ -104,18 +103,22 @@ export async function createAchievement(
   input: CreateAchievementInput,
   audit: AuditContext,
 ): Promise<Achievement> {
-  const student = await loadStudentInScope(prisma, actor, input.studentId);
-  if (!student.isActive) {
-    throw invalidState('This student is marked inactive');
+  const { schoolId, blockId, districtId } = actor;
+  if (!schoolId || !blockId || !districtId) {
+    throw forbidden('Only school staff can record an achievement');
   }
 
   const created = await prisma.$transaction(async (tx) => {
     const achievement = await tx.achievement.create({
       data: {
-        studentId: student.id,
-        schoolId: student.schoolId,
-        blockId: student.school.blockId,
-        districtId: student.school.districtId,
+        classLevel: toDbClassLevel(input.classLevel),
+        childrenRecognised: input.childrenRecognised,
+        // The teacher who guided it, which is the whole point of recording it
+        // against a school rather than a child.
+        creditedTeacherId: actor.id,
+        schoolId,
+        blockId,
+        districtId,
         category: input.category,
         level: input.level,
         title: input.title,
@@ -135,7 +138,7 @@ export async function createAchievement(
       schoolId: achievement.schoolId,
       blockId: achievement.blockId,
       districtId: achievement.districtId,
-      metadata: { studentId: student.id, level: input.level },
+      metadata: { classLevel: input.classLevel, level: input.level },
     });
     return achievement;
   });

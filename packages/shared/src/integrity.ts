@@ -108,7 +108,6 @@ export const RISK_FLAGS = [
   /** The school's first escalation. */
   'FIRST_SUBMISSION',
   /** Named children whose consent is not currently granted. */
-  'CONSENT_GAPS',
   /** No photograph at all on something being sent up the line. */
   'NO_EVIDENCE',
 ] as const;
@@ -130,7 +129,6 @@ export const RISK_WEIGHT: Record<RiskFlag, number> = {
   COUNT_EXCEEDS_CLASSES: 15,
   TEXT_REUSED: 20,
   BURST: 15,
-  CONSENT_GAPS: 15,
   LONG_BACKDATED: 10,
   NON_WORKING_DAY: 5,
   NO_EVIDENCE: 10,

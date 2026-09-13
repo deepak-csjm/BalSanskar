@@ -47,9 +47,9 @@ export async function resetDatabase(): Promise<void> {
   const db = getPrisma();
   await db.$executeRawUnsafe(`
     TRUNCATE TABLE
-      "audit_events","appreciations","activity_students","activity_media","activities",
-      "achievements","media_consents","students","media_assets","refresh_tokens",
-      "otp_challenges","users","schools","blocks","districts"
+      "audit_events","appreciations","activity_media","activities",
+      "achievements","class_enrolments","media_assets","refresh_tokens",
+      "otp_challenges","school_claims","users","schools","blocks","districts"
     RESTART IDENTITY CASCADE
   `);
 }
@@ -182,41 +182,27 @@ export function auth(user: TestUser): Record<string, string> {
   return { authorization: `Bearer ${user.token}` };
 }
 
-export async function createStudent(
+/**
+ * Records how many children a school teaches, which is all the platform knows
+ * about them. Replaces a helper that created a named child with a guardian and
+ * a consent slip; see docs/data-protection.md.
+ */
+export async function setEnrolled(
   schoolId: string,
-  overrides: Partial<{
-    fullName: string;
-    rollNumber: string;
-    consent: 'GRANTED' | 'DENIED' | null;
-  }> = {},
-): Promise<string> {
+  counts: Partial<Record<'CLASS_4' | 'CLASS_5' | 'CLASS_6' | 'CLASS_7', number>> = {
+    CLASS_5: 30,
+  },
+): Promise<void> {
   const db = getPrisma();
-  const student = await db.student.create({
-    data: {
-      schoolId,
-      fullName: overrides.fullName ?? 'अंजलि कुमारी',
-      classLevel: 'CLASS_5',
-      gender: 'FEMALE',
-      guardianName: 'राम कुमार',
-      rollNumber: overrides.rollNumber ?? null,
-    },
-  });
-  if (overrides.consent) {
-    const recorder = await db.user.findFirst({ where: { schoolId } });
-    if (recorder) {
-      await db.mediaConsent.create({
-        data: {
-          studentId: student.id,
-          status: overrides.consent,
-          method: 'PAPER_FORM',
-          guardianName: 'राम कुमार',
-          recordedById: recorder.id,
-          isCurrent: true,
-        },
-      });
-    }
+  for (const [classLevel, enrolled] of Object.entries(counts)) {
+    await db.classEnrolment.upsert({
+      where: {
+        schoolId_classLevel: { schoolId, classLevel: classLevel as 'CLASS_5' },
+      },
+      create: { schoolId, classLevel: classLevel as 'CLASS_5', enrolled, asOn: new Date() },
+      update: { enrolled },
+    });
   }
-  return student.id;
 }
 
 export const validActivityPayload = {

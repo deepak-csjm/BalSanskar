@@ -230,8 +230,7 @@ describe('publish blockers', () => {
   const clean = {
     status: 'PENDING_REVIEW' as const,
     hasMedia: true,
-    recognisedStudentConsents: ['GRANTED' as const],
-    mediaWithoutConsentCount: 0,
+    mediaWithoutChildCheckCount: 0,
     descriptionLength: 400,
     clearance: 'CLEARED' as const,
   };
@@ -251,8 +250,7 @@ describe('publish blockers', () => {
     const broken = {
       status: 'DRAFT' as const,
       hasMedia: true,
-      recognisedStudentConsents: ['REVOKED' as const],
-      mediaWithoutConsentCount: 2,
+      mediaWithoutChildCheckCount: 2,
       descriptionLength: 1,
       clearance: 'NOT_REQUIRED' as const,
     };
@@ -267,24 +265,29 @@ describe('publish blockers', () => {
     }
   });
 
-  it('blocks the open web when a child has no consent', () => {
-    expect(
-      evaluatePublishBlockers(
-        { ...clean, recognisedStudentConsents: ['GRANTED', 'REVOKED'] },
-        'PUBLIC',
-        'DISTRICT_ADMIN',
-        'PUBLIC',
-      ),
-    ).toContain('STUDENT_CONSENT_MISSING');
+  it('stops an unchecked photograph leaving the school at any level', () => {
+    // Deliberately not only at PUBLIC, unlike the consent rule this replaced.
+    // An identifiable child reaching a district dashboard is the same failure
+    // as one reaching the open web, with a smaller audience.
+    for (const level of ['BLOCK', 'DISTRICT', 'STATE', 'PUBLIC'] as const) {
+      expect(
+        evaluatePublishBlockers(
+          { ...clean, mediaWithoutChildCheckCount: 1 },
+          level,
+          'DISTRICT_ADMIN',
+          level,
+        ),
+      ).toContain('CHILD_VISIBLE_CHECK_MISSING');
+    }
   });
 
-  it('does not apply the consent gate inside the platform', () => {
+  it('does not ask about photographs for a record that stays in the school', () => {
     expect(
       evaluatePublishBlockers(
-        { ...clean, recognisedStudentConsents: ['REVOKED'], mediaWithoutConsentCount: 3 },
-        'DISTRICT',
-        'DISTRICT_ADMIN',
-        'DISTRICT',
+        { ...clean, clearance: 'NOT_REQUIRED', mediaWithoutChildCheckCount: 3 },
+        'SCHOOL',
+        'PRINCIPAL',
+        'SCHOOL',
       ),
     ).toEqual([]);
   });
@@ -347,24 +350,12 @@ describe('publish blockers', () => {
     ).toContain('BLOCK_CLEARANCE_REQUIRED');
   });
 
-  it('blocks the open web when a photograph has not been checked', () => {
-    expect(
-      evaluatePublishBlockers(
-        { ...clean, mediaWithoutConsentCount: 1 },
-        'PUBLIC',
-        'DISTRICT_ADMIN',
-        'PUBLIC',
-      ),
-    ).toContain('MEDIA_CONSENT_MISSING');
-  });
-
   it('reports every problem at once rather than one at a time', () => {
     const blockers = evaluatePublishBlockers(
       {
         status: 'DRAFT',
         hasMedia: true,
-        recognisedStudentConsents: ['DENIED'],
-        mediaWithoutConsentCount: 2,
+        mediaWithoutChildCheckCount: 2,
         descriptionLength: 3,
       },
       'PUBLIC',
@@ -379,8 +370,7 @@ describe('publish blockers', () => {
         'VISIBILITY_ABOVE_REQUEST',
         'ATTESTATION_REQUIRED',
         'BLOCK_CLEARANCE_REQUIRED',
-        'STUDENT_CONSENT_MISSING',
-        'MEDIA_CONSENT_MISSING',
+        'CHILD_VISIBLE_CHECK_MISSING',
       ]),
     );
   });

@@ -5,7 +5,6 @@ import {
   cleanText,
   idSchema,
   paginationSchema,
-  publicDisplayName,
   type PublicActivity,
 } from '@balsanskar/shared';
 import { getPrisma } from '../../lib/prisma.js';
@@ -26,8 +25,12 @@ import { toApiClassLevels } from '../../lib/class-level.js';
  * web.
  *
  * A record reaches this endpoint only if it is PUBLISHED, marked PUBLIC by a
- * district-level moderator, and — at the moment of publication — covered by
- * guardian consent for every named child.
+ * district-level moderator, and carrying only photographs three people have
+ * confirmed contain no identifiable child.
+ *
+ * No child is named here, because no child is named anywhere in this platform.
+ * The showcase celebrates a school and the teacher who did the work; see
+ * docs/data-protection.md.
  */
 
 const publicListQuery = paginationSchema.extend({
@@ -115,22 +118,18 @@ const publicSelect = {
   publishedAt: true,
   classLevels: true,
   participantCount: true,
+  schemes: true,
   school: { select: { nameHi: true } },
   block: { select: { nameHi: true } },
   district: { select: { nameHi: true } },
   media: {
     orderBy: { order: 'asc' as const },
-    // Only photographs a moderator has confirmed against a consent slip.
-    where: { consentVerified: true },
+    // Only photographs somebody has confirmed contain no identifiable child.
+    where: { noIdentifiableChild: true },
     select: {
       caption: true,
       asset: { select: { storageKey: true, width: true, height: true, kind: true } },
     },
-  },
-  recognisedStudents: {
-    // The surname is fetched and then discarded by publicDisplayName; nothing
-    // below the given name reaches the response.
-    select: { student: { select: { fullName: true, classLevel: true } } },
   },
 };
 
@@ -150,9 +149,7 @@ type PublicRow = {
     caption: string | null;
     asset: { storageKey: string; width: number | null; height: number | null; kind: string };
   }>;
-  recognisedStudents: Array<{
-    student: { fullName: string; classLevel: Parameters<typeof toApiClassLevels>[0][number] };
-  }>;
+  schemes: PublicActivity['schemes'];
 };
 
 async function toPublicActivity(row: PublicRow): Promise<PublicActivity> {
@@ -180,10 +177,7 @@ async function toPublicActivity(row: PublicRow): Promise<PublicActivity> {
           height: item.asset.height,
         })),
     ),
-    recognisedStudents: row.recognisedStudents.map((link) => ({
-      displayName: publicDisplayName(link.student.fullName),
-      classLevel: toApiClassLevels([link.student.classLevel])[0]!,
-    })),
+    schemes: row.schemes,
     publishedAt: (row.publishedAt ?? row.occurredOn).toISOString(),
   };
 }

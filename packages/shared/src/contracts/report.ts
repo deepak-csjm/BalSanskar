@@ -40,7 +40,13 @@ export const overviewReportSchema = z.object({
     students: z.number().int(),
     publishedActivities: z.number().int(),
     verifiedAchievements: z.number().int(),
-    studentsRecognised: z.number().int(),
+    /**
+     * Children reached, summed from what each activity reported taking part.
+     * Not distinct children — no child is named anywhere in this platform, so
+     * one who joined two activities counts twice. An honest over-count beats a
+     * precise number that would need a register of children to produce.
+     */
+    childParticipations: z.number().int(),
   }),
   participationRate: z.object({
     /** activeSchools / schools, 0..1. The headline number for the department. */
@@ -81,7 +87,7 @@ export const leaderboardRowSchema = z.object({
   activeSchools: z.number().int().nullable(),
   publishedActivities: z.number().int(),
   verifiedAchievements: z.number().int(),
-  studentsRecognised: z.number().int(),
+  childParticipations: z.number().int(),
   lastActivityAt: z.string().nullable(),
 });
 export type LeaderboardRow = z.infer<typeof leaderboardRowSchema>;

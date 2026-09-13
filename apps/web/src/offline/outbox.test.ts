@@ -25,7 +25,7 @@ describe('offline outbox', () => {
     category: 'READING_AND_LIBRARY' as const,
     occurredOn: '2026-02-01',
     classLevels: ['5' as const],
-    studentIds: [],
+    schemes: [],
     tags: [],
   };
 

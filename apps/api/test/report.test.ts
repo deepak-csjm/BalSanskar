@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import {
   auth,
-  createStudent,
+  setEnrolled,
   createTestApp,
   createUser,
   prisma,
@@ -67,7 +67,6 @@ describe('reporting and the public showcase', () => {
 
   async function publishActivity(options: {
     visibility: 'SCHOOL' | 'BLOCK' | 'DISTRICT' | 'PUBLIC';
-    studentIds?: string[];
     title?: string;
   }): Promise<string> {
     const created = await app.inject({
@@ -82,7 +81,6 @@ describe('reporting and the public showcase', () => {
         occurredOn: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10),
         classLevels: ['4'],
         participantCount: 28,
-        studentIds: options.studentIds ?? [],
       },
     });
     const id = (created.json() as { id: string }).id;
@@ -124,13 +122,13 @@ describe('reporting and the public showcase', () => {
     });
 
     it('counts only verified achievements', async () => {
-      const studentId = await createStudent(geo.schoolA1);
+      await setEnrolled(geo.schoolA1);
       const created = await app.inject({
         method: 'POST',
         url: '/v1/achievements',
         headers: auth(teacher),
         payload: {
-          studentId,
+          classLevel: '5',
           category: 'SPORTS',
           level: 'BLOCK',
           title: 'First place, block athletics meet',
@@ -263,32 +261,37 @@ describe('reporting and the public showcase', () => {
       expect((response.json() as { items: unknown[] }).items).toHaveLength(0);
     });
 
-    it('never returns a surname, a guardian, a phone number or a roll number', async () => {
-      const studentId = await createStudent(geo.schoolA1, {
-        fullName: 'अंजलि कुमारी',
-        rollNumber: '17',
-      });
-      await app.inject({
-        method: 'POST',
-        url: `/v1/students/${studentId}/consent`,
-        headers: auth(teacher),
-        payload: { status: 'GRANTED', method: 'PAPER_FORM', guardianName: 'राम कुमार' },
-      });
-      const id = await publishActivity({ visibility: 'PUBLIC', studentIds: [studentId] });
+    it('carries nothing about any child at all', async () => {
+      /**
+       * This used to assert that the showcase printed a given name and dropped
+       * the surname. It now asserts something much stronger and much easier to
+       * keep true: there is no child in the response, because there is no child
+       * in the platform. See docs/data-protection.md.
+       */
+      const id = await publishActivity({ visibility: 'PUBLIC' });
 
       const response = await app.inject({ method: 'GET', url: `/v1/public/activities/${id}` });
       expect(response.statusCode).toBe(200);
       const raw = response.body;
 
-      expect(raw).toContain('अंजलि');
-      expect(raw).not.toContain('कुमारी'); // the surname
-      expect(raw).not.toContain('राम कुमार'); // the guardian
+      for (const field of [
+        'studentId',
+        'students',
+        'recognisedStudents',
+        'displayName',
+        'guardian',
+        'rollNumber',
+        'fullName',
+      ]) {
+        expect(raw).not.toContain(field);
+      }
       expect(raw).not.toContain(teacher.phone);
-      expect(raw).not.toContain('"rollNumber"');
-      expect(raw).not.toContain(studentId);
 
-      const body = response.json() as { recognisedStudents: Array<Record<string, unknown>> };
-      expect(body.recognisedStudents).toEqual([{ displayName: 'अंजलि', classLevel: '5' }]);
+      // What it does carry: the school, the work, and how many took part.
+      const body = response.json() as Record<string, unknown>;
+      expect(body.schoolName).toBeTruthy();
+      expect(body.participantCount).toBe(28);
+      expect(body.classLevels).toEqual(['4']);
     });
 
     it('reports aggregate statistics without naming a school', async () => {
@@ -303,13 +306,13 @@ describe('reporting and the public showcase', () => {
 
   describe('achievement verification', () => {
     it('refuses verification by the person who recorded it', async () => {
-      const studentId = await createStudent(geo.schoolA1);
+      await setEnrolled(geo.schoolA1);
       const created = await app.inject({
         method: 'POST',
         url: '/v1/achievements',
         headers: auth(principal),
         payload: {
-          studentId,
+          classLevel: '5',
           category: 'ACADEMIC',
           level: 'SCHOOL',
           title: 'Top of the class in the term assessment',
@@ -328,13 +331,13 @@ describe('reporting and the public showcase', () => {
     });
 
     it('requires district sign-off for a state-level claim', async () => {
-      const studentId = await createStudent(geo.schoolA1);
+      await setEnrolled(geo.schoolA1);
       const created = await app.inject({
         method: 'POST',
         url: '/v1/achievements',
         headers: auth(teacher),
         payload: {
-          studentId,
+          classLevel: '5',
           category: 'SCIENCE',
           level: 'STATE',
           title: 'State science exhibition winner',

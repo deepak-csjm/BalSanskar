@@ -41,9 +41,6 @@ export const SCHOOL_TYPES = [
 ] as const;
 export type SchoolType = (typeof SCHOOL_TYPES)[number];
 
-export const GENDERS = ['MALE', 'FEMALE', 'OTHER'] as const;
-export type Gender = (typeof GENDERS)[number];
-
 /**
  * Class labels used by UP Basic Shiksha Parishad schools: Balvatika (pre-primary)
  * through class 8.
@@ -117,16 +114,6 @@ export type AchievementLevel = (typeof ACHIEVEMENT_LEVELS)[number];
 export const VERIFICATION_STATUSES = ['PENDING', 'VERIFIED', 'REJECTED'] as const;
 export type VerificationStatus = (typeof VERIFICATION_STATUSES)[number];
 
-export const CONSENT_STATUSES = ['GRANTED', 'DENIED', 'REVOKED'] as const;
-export type ConsentStatus = (typeof CONSENT_STATUSES)[number];
-
-/**
- * How the guardian's decision was captured. PAPER_FORM is the realistic default in
- * rural UP: the school keeps a signed slip and scans or photographs it.
- */
-export const CONSENT_METHODS = ['PAPER_FORM', 'VERBAL_IN_PERSON', 'DIGITAL_SELF_SERVE'] as const;
-export type ConsentMethod = (typeof CONSENT_METHODS)[number];
-
 export const MEDIA_KINDS = ['IMAGE', 'DOCUMENT'] as const;
 export type MediaKind = (typeof MEDIA_KINDS)[number];
 
@@ -148,11 +135,7 @@ export const AUDIT_ACTIONS = [
   'SCHOOL_CLAIM_VERIFIED',
   'SCHOOL_CLAIM_REJECTED',
   'SCHOOL_TRUST_CHANGED',
-  'STUDENT_CREATED',
-  'STUDENT_UPDATED',
-  'STUDENT_DEACTIVATED',
-  'CONSENT_RECORDED',
-  'CONSENT_REVOKED',
+  'ENROLMENT_RECORDED',
   'ACTIVITY_CREATED',
   'ACTIVITY_UPDATED',
   'ACTIVITY_SUBMITTED',

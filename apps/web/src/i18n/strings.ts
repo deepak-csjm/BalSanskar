@@ -18,7 +18,38 @@ export const strings = {
 
     'nav.home': 'मुख्य',
     'nav.activities': 'गतिविधियाँ',
-    'nav.students': 'बच्चे',
+    'nav.enrolment': 'पंजीकरण',
+
+    'class.BALVATIKA': 'बालवाटिका',
+    'class.1': 'कक्षा 1',
+    'class.2': 'कक्षा 2',
+    'class.3': 'कक्षा 3',
+    'class.4': 'कक्षा 4',
+    'class.5': 'कक्षा 5',
+    'class.6': 'कक्षा 6',
+    'class.7': 'कक्षा 7',
+    'class.8': 'कक्षा 8',
+
+    'enrolment.title': 'विद्यालय का पंजीकरण',
+    'enrolment.intro': 'हर कक्षा में कितने बच्चे हैं — बस संख्या, कोई नाम नहीं।',
+    'enrolment.hint':
+      'जो कक्षा आपके विद्यालय में नहीं चलती, उसे खाली छोड़ दीजिए। यह जानकारी सत्र में एक बार भरनी होती है।',
+    'enrolment.total': 'कुल बच्चे',
+    'enrolment.asOn': 'रजिस्टर की तिथि',
+    'enrolment.asOnLabel': 'यह संख्या किस तिथि के रजिस्टर से ली गई',
+    'enrolment.asOnHint': 'ताकि अंतर होने पर अधिकारी सही तिथि के बारे में पूछ सकें।',
+    'enrolment.updatedBy': 'भरने वाले',
+    'enrolment.saved': 'पंजीकरण सुरक्षित हो गया।',
+    'enrolment.privacy':
+      'यह मंच किसी बच्चे का नाम, फ़ोटो या अभिभावक का विवरण नहीं रखता — केवल कक्षावार संख्या।',
+
+    'scheme.label': 'यह कार्य किस योजना से जुड़ा है',
+    'scheme.hint':
+      'अधिकतम तीन चुनिए। इसी से खंड कार्यालय की मासिक योजनावार रिपोर्ट अपने आप बन जाती है।',
+    'media.noChildLabel': 'इस फ़ोटो में किसी बच्चे का चेहरा पहचान में नहीं आता',
+    'media.noChildHint':
+      'बच्चों के चेहरे की फ़ोटो न लगाएँ। कार्य की फ़ोटो लगाइए — पठन कोना, बगिया, माॅडल, दीवार पत्रिका।',
+    'media.noChildConfirm': 'पुष्टि हुई — इसमें कोई बच्चा पहचान में नहीं आता',
     'nav.review': 'समीक्षा',
     'nav.reports': 'रिपोर्ट',
     'nav.people': 'शिक्षक',
@@ -104,35 +135,9 @@ export const strings = {
     'visibility.STATE': 'राज्य स्तर',
     'visibility.PUBLIC': 'सार्वजनिक',
 
-    'student.name': 'बच्चे का नाम',
-    'student.class': 'कक्षा',
-    'student.section': 'वर्ग',
-    'student.roll': 'क्रमांक',
-    'student.gender': 'लिंग',
-    'student.guardian': 'अभिभावक का नाम',
-    'student.guardianPhone': 'अभिभावक का मोबाइल',
-    'student.birthYear': 'जन्म वर्ष',
-    'student.empty': 'इस विद्यालय में अभी कोई बच्चा दर्ज नहीं है।',
-
-    'consent.title': 'फ़ोटो प्रकाशन की सहमति',
-    'consent.explain':
-      'बच्चे की फ़ोटो सार्वजनिक रूप से दिखाने से पहले अभिभावक की लिखित सहमति आवश्यक है।',
-    'consent.status.GRANTED': 'सहमति प्राप्त',
-    'consent.status.DENIED': 'सहमति नहीं',
-    'consent.status.REVOKED': 'सहमति वापस ली गई',
-    'consent.status.NONE': 'दर्ज नहीं',
     'verification.PENDING': 'सत्यापन शेष',
     'verification.VERIFIED': 'सत्यापित',
     'verification.REJECTED': 'अस्वीकृत',
-    'consent.method.PAPER_FORM': 'हस्ताक्षरित पर्ची',
-    'consent.method.VERBAL_IN_PERSON': 'व्यक्तिगत रूप से मौखिक',
-    'consent.method.DIGITAL_SELF_SERVE': 'डिजिटल',
-    'consent.guardianName': 'सहमति देने वाले अभिभावक का नाम',
-    'consent.relation': 'बच्चे से संबंध',
-    'consent.revoke': 'सहमति वापस लें',
-    'consent.revokeReason': 'कारण',
-    'consent.revokeWarning':
-      'सहमति वापस लेते ही इस बच्चे की सभी सार्वजनिक फ़ोटो तुरंत हटा दी जाएँगी।',
 
     'review.title': 'समीक्षा हेतु लंबित',
     'review.empty': 'समीक्षा के लिए कुछ भी लंबित नहीं है।',
@@ -274,7 +279,38 @@ export const strings = {
 
     'nav.home': 'Home',
     'nav.activities': 'Activities',
-    'nav.students': 'Children',
+    'nav.enrolment': 'Register',
+
+    'class.BALVATIKA': 'Balvatika',
+    'class.1': 'Class 1',
+    'class.2': 'Class 2',
+    'class.3': 'Class 3',
+    'class.4': 'Class 4',
+    'class.5': 'Class 5',
+    'class.6': 'Class 6',
+    'class.7': 'Class 7',
+    'class.8': 'Class 8',
+
+    'enrolment.title': "The school's register",
+    'enrolment.intro': 'How many children in each class. Numbers only, no names.',
+    'enrolment.hint':
+      'Leave a class blank if your school does not run it. This is filled in once a term.',
+    'enrolment.total': 'Children in all',
+    'enrolment.asOn': 'Register dated',
+    'enrolment.asOnLabel': 'The date of the register these numbers came from',
+    'enrolment.asOnHint': 'So an officer asking about a discrepancy knows which register to check.',
+    'enrolment.updatedBy': 'Recorded by',
+    'enrolment.saved': 'Register saved.',
+    'enrolment.privacy':
+      "This platform holds no child's name, photograph or guardian details — only counts by class.",
+
+    'scheme.label': 'Which programme does this work count towards',
+    'scheme.hint':
+      "Pick up to three. This is what makes the block office's monthly scheme-wise report assemble itself.",
+    'media.noChildLabel': "No child's face is identifiable in this photograph",
+    'media.noChildHint':
+      'Photograph the work rather than the children — the reading corner, the garden, the model, the wall chart.',
+    'media.noChildConfirm': 'Confirmed — no child is identifiable in this one',
     'nav.review': 'Review',
     'nav.reports': 'Reports',
     'nav.people': 'Teachers',
@@ -361,35 +397,9 @@ export const strings = {
     'visibility.STATE': 'State',
     'visibility.PUBLIC': 'Public',
 
-    'student.name': "Child's name",
-    'student.class': 'Class',
-    'student.section': 'Section',
-    'student.roll': 'Roll number',
-    'student.gender': 'Gender',
-    'student.guardian': "Guardian's name",
-    'student.guardianPhone': "Guardian's mobile",
-    'student.birthYear': 'Year of birth',
-    'student.empty': 'No children recorded at this school yet.',
-
-    'consent.title': 'Consent to publish photographs',
-    'consent.explain':
-      "A guardian's written consent is required before a child's photograph can be shown publicly.",
-    'consent.status.GRANTED': 'Consent given',
-    'consent.status.DENIED': 'Consent refused',
-    'consent.status.REVOKED': 'Consent withdrawn',
-    'consent.status.NONE': 'Not recorded',
     'verification.PENDING': 'Awaiting verification',
     'verification.VERIFIED': 'Verified',
     'verification.REJECTED': 'Rejected',
-    'consent.method.PAPER_FORM': 'Signed slip',
-    'consent.method.VERBAL_IN_PERSON': 'In person, verbally',
-    'consent.method.DIGITAL_SELF_SERVE': 'Digital',
-    'consent.guardianName': 'Name of the guardian giving consent',
-    'consent.relation': 'Relationship to the child',
-    'consent.revoke': 'Withdraw consent',
-    'consent.revokeReason': 'Reason',
-    'consent.revokeWarning':
-      'Withdrawing consent immediately removes every public photograph of this child.',
 
     'review.title': 'Waiting for review',
     'review.empty': 'Nothing is waiting for review.',

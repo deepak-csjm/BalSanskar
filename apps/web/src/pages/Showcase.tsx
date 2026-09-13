@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import type { PublicActivity } from '@balsanskar/shared';
 import { useI18n } from '../i18n/index.js';
 import { useApi, type PagedResponse } from '../lib/useApi.js';
-import { CATEGORY_LABELS } from '../lib/labels.js';
+import { CATEGORY_LABELS, SCHEME_LABELS } from '../lib/labels.js';
 import { Card, EmptyState, ErrorNotice, Spinner, Stat } from '../components/ui.js';
 import { TopBar } from '../components/Shell.js';
 
@@ -107,11 +107,15 @@ function ShowcaseCard({ activity }: { activity: PublicActivity }) {
             {activity.participantCount} {t('activity.participantsShort')}
           </span>
         ) : null}
-        {activity.recognisedStudents.map((student, index) => (
-          <span className="tag tag--ochre" key={`${student.displayName}-${index}`}>
-            {student.displayName} · {student.classLevel}
-          </span>
-        ))}
+        {/* Programmes, where a child's given name used to sit. The work is what
+            is being celebrated, and the school gets the credit for it. */}
+        {activity.schemes
+          .filter((scheme) => scheme !== 'NONE')
+          .map((scheme) => (
+            <span className="tag tag--ochre" key={scheme}>
+              {SCHEME_LABELS[locale][scheme]}
+            </span>
+          ))}
       </div>
     </Card>
   );

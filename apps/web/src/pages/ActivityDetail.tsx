@@ -157,24 +157,6 @@ export function ActivityDetail() {
         </Card>
       ) : null}
 
-      {data.recognisedStudents.length > 0 ? (
-        <Card>
-          <h2>{t('activity.students')}</h2>
-          <ul style={{ margin: 0, paddingInlineStart: '1.2rem' }}>
-            {data.recognisedStudents.map((student) => (
-              <li key={student.id}>
-                {student.fullName} <span className="faint">({student.classLevel})</span>{' '}
-                {student.hasMediaConsent ? (
-                  <span className="tag tag--green">{t('consent.status.GRANTED')}</span>
-                ) : (
-                  <span className="tag tag--ochre">{t('consent.status.NONE')}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
-
       {actionError ? <ErrorNotice message={actionError} /> : null}
 
       {canSubmit ? (
@@ -614,11 +596,11 @@ function MediaConsentChecklist({
           <input
             type="checkbox"
             disabled={busy}
-            checked={item.consentVerified}
+            checked={item.noIdentifiableChild}
             onChange={(event) => onChange(item.id, event.target.checked)}
           />
           <span>
-            {t('review.confirmMedia')} <span className="faint">#{index + 1}</span>
+            {t('media.noChildConfirm')} <span className="faint">#{index + 1}</span>
           </span>
         </label>
       ))}

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import {
   auth,
-  createStudent,
+  setEnrolled,
   createTestApp,
   createUser,
   prisma,
@@ -266,19 +266,6 @@ describe('school onboarding and the escalation gate', () => {
         blockId: geo.blockA1,
         districtId: geo.districtA,
       });
-
-      const student = await app.inject({
-        method: 'POST',
-        url: '/v1/students',
-        headers: auth(staff),
-        payload: {
-          fullName: 'Test Child',
-          classLevel: '3',
-          gender: 'MALE',
-          guardianName: 'Someone',
-        },
-      });
-      expect(student.statusCode).toBe(409);
 
       const activity = await app.inject({
         method: 'POST',
@@ -566,20 +553,13 @@ describe('school onboarding and the escalation gate', () => {
       );
     });
 
-    it('allows it once the block has cleared it and consent is on file', async () => {
-      const studentId = await createStudent(geo.schoolA1);
-      await app.inject({
-        method: 'POST',
-        url: `/v1/students/${studentId}/consent`,
-        headers: auth(teacher),
-        payload: { status: 'GRANTED', method: 'PAPER_FORM', guardianName: 'Ram Kumar' },
-      });
-
+    it('allows it once the block has cleared it', async () => {
+      await setEnrolled(geo.schoolA1);
       const created = await app.inject({
         method: 'POST',
         url: '/v1/activities',
         headers: auth(teacher),
-        payload: { ...validActivityPayload, studentIds: [studentId] },
+        payload: validActivityPayload,
       });
       const id = (created.json() as { id: string }).id;
       await app.inject({
@@ -632,6 +612,17 @@ describe('school onboarding and the escalation gate', () => {
         headers: auth(teacher),
         payload: { requestedVisibility: 'BLOCK' },
       });
+      // Every photograph has to be confirmed free of an identifiable child
+      // before the work can leave the school, so the helper does what a head
+      // teacher would do rather than skipping the gate under test elsewhere.
+      for (const media of await prisma().activityMedia.findMany({ where: { activityId: id } })) {
+        await app.inject({
+          method: 'POST',
+          url: `/v1/activities/${id}/media/${media.id}/consent`,
+          headers: auth(head),
+          payload: { verified: true },
+        });
+      }
       await app.inject({
         method: 'POST',
         url: `/v1/activities/${id}/moderate`,
@@ -649,8 +640,8 @@ describe('school onboarding and the escalation gate', () => {
     });
 
     it('flags more participants than the school has children', async () => {
-      await createStudent(geo.schoolA1, { rollNumber: '1' });
-      await createStudent(geo.schoolA1, { rollNumber: '2', fullName: 'Second Child' });
+      await setEnrolled(geo.schoolA1);
+      await setEnrolled(geo.schoolA1);
       const activity = await escalate({ participantCount: 400 });
       expect(activity.riskFlags).toContain('COUNT_EXCEEDS_ROSTER');
     });
@@ -864,7 +855,7 @@ describe('school onboarding and the escalation gate', () => {
       // The roster check only fires when there is a roster to check against:
       // a school that has not entered its children yet is not evidence of
       // anything, and flagging every such school would flood the queue.
-      await createStudent(geo.schoolA1, { rollNumber: '1' });
+      await setEnrolled(geo.schoolA1);
       await escalate({ participantCount: 900 });
       const queue = await app.inject({
         method: 'GET',
@@ -902,6 +893,107 @@ describe('school onboarding and the escalation gate', () => {
         headers: auth(head),
       });
       expect(response.statusCode).toBe(403);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The line the platform does not cross
+  // -------------------------------------------------------------------------
+
+  describe('children', () => {
+    /**
+     * The guarantee everything else rests on, asserted against the database
+     * rather than against any one endpoint. If a child's name can be persuaded
+     * into this platform through any route, the reasoning in
+     * docs/data-protection.md stops holding and the DPDP exposure comes back.
+     */
+    it('has nowhere to put a child', async () => {
+      const columns = await prisma().$queryRaw<{ table_name: string; column_name: string }[]>`
+        SELECT table_name, column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND (
+            column_name ILIKE '%guardian%'
+            OR column_name ILIKE '%student%'
+            OR column_name ILIKE '%consent%'
+            OR column_name = 'gender'
+            OR column_name = 'birthYear'
+            OR column_name = 'rollNumber'
+          )
+      `;
+      expect(columns).toEqual([]);
+
+      const tables = await prisma().$queryRaw<{ table_name: string }[]>`
+        SELECT table_name FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name IN ('students', 'media_consents', 'activity_students')
+      `;
+      expect(tables).toEqual([]);
+    });
+
+    it('refuses the endpoints that used to hold one', async () => {
+      for (const url of ['/v1/students', '/v1/students/anything/consent']) {
+        const response = await app.inject({
+          method: 'POST',
+          url,
+          headers: auth(head),
+          payload: {},
+        });
+        expect(response.statusCode).toBe(404);
+      }
+    });
+
+    it('records how many children there are without recording any of them', async () => {
+      const saved = await app.inject({
+        method: 'PUT',
+        url: `/v1/schools/${geo.schoolA1}/enrolment`,
+        headers: auth(head),
+        payload: {
+          classes: [
+            { classLevel: '4', enrolled: 31 },
+            { classLevel: '5', enrolled: 28 },
+          ],
+          asOn: '2026-09-01',
+        },
+      });
+      expect(saved.statusCode).toBe(200);
+      const body = saved.json() as { total: number; classes: unknown[] };
+      expect(body.total).toBe(59);
+      expect(body.classes).toHaveLength(2);
+    });
+
+    it('still catches a school claiming more participants than it teaches', async () => {
+      // The one thing the roster was actually load-bearing for. It works the
+      // same against counts, which is why the roster was not worth its risk.
+      await app.inject({
+        method: 'PUT',
+        url: `/v1/schools/${geo.schoolA1}/enrolment`,
+        headers: auth(head),
+        payload: { classes: [{ classLevel: '5', enrolled: 12 }], asOn: '2026-09-01' },
+      });
+      const created = await app.inject({
+        method: 'POST',
+        url: '/v1/activities',
+        headers: auth(teacher),
+        payload: { ...validActivityPayload, participantCount: 400 },
+      });
+      const id = (created.json() as { id: string }).id;
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/submit`,
+        headers: auth(teacher),
+        payload: { requestedVisibility: 'BLOCK' },
+      });
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(head),
+        payload: { decision: 'PUBLISH', visibility: 'BLOCK', attestation: { confirmed: true } },
+      });
+
+      const activity = await prisma().activity.findUniqueOrThrow({ where: { id } });
+      expect(activity.riskFlags).toContain('COUNT_EXCEEDS_ROSTER');
+      expect(activity.riskNotes.join(' ')).toContain('12 children');
     });
   });
 

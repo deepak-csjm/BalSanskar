@@ -34,7 +34,9 @@ const ActivityNew = lazy(() =>
 const ActivityDetail = lazy(() =>
   import('./pages/ActivityDetail.js').then((m) => ({ default: m.ActivityDetail })),
 );
-const Students = lazy(() => import('./pages/Students.js').then((m) => ({ default: m.Students })));
+const Enrolment = lazy(() =>
+  import('./pages/Enrolment.js').then((m) => ({ default: m.Enrolment })),
+);
 const Reports = lazy(() => import('./pages/Reports.js').then((m) => ({ default: m.Reports })));
 const People = lazy(() => import('./pages/People.js').then((m) => ({ default: m.People })));
 const Claims = lazy(() => import('./pages/Claims.js').then((m) => ({ default: m.Claims })));
@@ -67,7 +69,7 @@ export function App() {
                 <Route path="activities" element={<Activities />} />
                 <Route path="activities/new" element={<ActivityNew />} />
                 <Route path="activities/:id" element={<ActivityDetail />} />
-                <Route path="students" element={<Students />} />
+                <Route path="enrolment" element={<Enrolment />} />
                 <Route path="review" element={<ReviewQueue />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="people" element={<People />} />

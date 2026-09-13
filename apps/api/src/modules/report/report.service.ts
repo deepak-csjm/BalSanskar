@@ -111,16 +111,16 @@ export async function buildOverview(
   ] = await Promise.all([
     prisma.school.count({ where: { ...schools, isActive: true } }),
     prisma.user.count({ where: { status: 'ACTIVE', school: schools } }),
-    prisma.student.count({ where: { isActive: true, school: schools } }),
+    prisma.classEnrolment.aggregate({ where: { school: schools }, _sum: { enrolled: true } }),
     prisma.activity.count({ where: activities }),
     prisma.achievement.count({ where: achievements }),
     prisma.activity.groupBy({ by: ['schoolId'], where: activities, _count: { _all: true } }),
     prisma.activity.groupBy({ by: ['authorId'], where: activities, _count: { _all: true } }),
-    prisma.activityStudent.findMany({
-      where: { activity: activities },
-      select: { studentId: true },
-      distinct: ['studentId'],
-    }),
+    // Children reached, as a sum of what schools reported taking part. Not a
+    // count of distinct named children, because no child is named: see
+    // docs/data-protection.md. It over-counts a child who joined two
+    // activities, which is why it is labelled participations.
+    prisma.activity.aggregate({ where: activities, _sum: { participantCount: true } }),
     prisma.activity.groupBy({ by: ['category'], where: activities, _count: { _all: true } }),
     prisma.achievement.groupBy({ by: ['level'], where: achievements, _count: { _all: true } }),
   ]);
@@ -140,10 +140,10 @@ export async function buildOverview(
       activeSchools: activeSchoolGroups.length,
       teachers: teacherCount,
       activeTeachers: activeTeacherGroups.length,
-      students: studentCount,
+      students: studentCount._sum.enrolled ?? 0,
       publishedActivities,
       verifiedAchievements,
-      studentsRecognised: recognisedStudents.length,
+      childParticipations: recognisedStudents._sum.participantCount ?? 0,
     },
     participationRate: {
       schools: schoolCount === 0 ? 0 : round2(activeSchoolGroups.length / schoolCount),
@@ -297,7 +297,7 @@ export async function buildLeaderboard(
         where: { ...achievementWhere(scope, window), schoolId: { in: schoolIds } },
         _count: { _all: true },
       }),
-      countRecognisedStudentsBySchool(prisma, scope, window),
+      countParticipationsBySchool(prisma, scope, window),
       prisma.activity.groupBy({
         by: ['schoolId'],
         where: { ...activityWhere(scope, window), schoolId: { in: schoolIds } },
@@ -317,7 +317,7 @@ export async function buildLeaderboard(
       activeSchools: null,
       publishedActivities: activityMap.get(school.id) ?? 0,
       verifiedAchievements: achievementMap.get(school.id) ?? 0,
-      studentsRecognised: recognised.get(school.id) ?? 0,
+      childParticipations: recognised.get(school.id) ?? 0,
       lastActivityAt: lastMap.get(school.id)?.toISOString() ?? null,
     }));
 
@@ -395,7 +395,7 @@ export async function buildLeaderboard(
     activeSchools: activeMap.get(unit.id) ?? 0,
     publishedActivities: activityMap.get(unit.id) ?? 0,
     verifiedAchievements: achievementMap.get(unit.id) ?? 0,
-    studentsRecognised: 0,
+    childParticipations: 0,
     lastActivityAt: lastMap.get(unit.id)?.toISOString() ?? null,
   }));
 
@@ -416,22 +416,25 @@ function orderRows<T extends { publishedActivities: number; verifiedAchievements
   );
 }
 
-async function countRecognisedStudentsBySchool(
+/**
+ * Children reached per school, summed from what each activity reported.
+ *
+ * Not distinct children: no child is named anywhere in this platform, so a
+ * child who joined two activities is counted twice. The field is called
+ * participations for that reason — an honest over-count beats a precise number
+ * that would require holding a register of children to produce.
+ */
+async function countParticipationsBySchool(
   prisma: PrismaClient,
   scope: ScopeFilter,
   window: Window,
 ): Promise<Map<string, number>> {
-  const links = await prisma.activityStudent.findMany({
-    where: { activity: activityWhere(scope, window) },
-    select: { studentId: true, activity: { select: { schoolId: true } } },
-    distinct: ['studentId'],
+  const rows = await prisma.activity.groupBy({
+    by: ['schoolId'],
+    where: activityWhere(scope, window),
+    _sum: { participantCount: true },
   });
-  const counts = new Map<string, number>();
-  for (const link of links) {
-    const schoolId = link.activity.schoolId;
-    counts.set(schoolId, (counts.get(schoolId) ?? 0) + 1);
-  }
-  return counts;
+  return new Map(rows.map((row) => [row.schoolId, row._sum.participantCount ?? 0]));
 }
 
 /**

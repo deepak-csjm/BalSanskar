@@ -746,3 +746,16 @@ td.num {
     font-size: 1.85rem;
   }
 }
+
+/**
+ * Nine class counts, laid out so a head teacher can fill them in with a thumb.
+ *
+ * Two columns on a phone rather than one: the whole form should be visible at
+ * once, because its selling point over the roster it replaced is that it takes
+ * a minute.
+ */
+.enrolment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  gap: 0 var(--space-3);
+}

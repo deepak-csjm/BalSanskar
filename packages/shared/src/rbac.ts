@@ -36,11 +36,12 @@ export const PERMISSIONS = [
   'user:suspend',
   'user:assign_role',
 
-  // Children's records
-  'student:read',
-  'student:write',
-  'consent:read',
-  'consent:write',
+  /**
+   * How many children the school teaches, by class. Not who they are — there is
+   * no child record in this platform and there will not be one. See
+   * docs/data-protection.md.
+   */
+  'enrolment:write',
 
   // Work of the school
   'activity:create',
@@ -60,6 +61,7 @@ export const PERMISSIONS = [
    */
   'activity:clear',
 
+  'achievement:read',
   'achievement:create',
   'achievement:verify',
 
@@ -76,14 +78,11 @@ export type Permission = (typeof PERMISSIONS)[number];
 const TEACHER_PERMISSIONS: Permission[] = [
   'school:read',
   'user:read',
-  'student:read',
-  'student:write',
-  'consent:read',
-  'consent:write',
   'activity:create',
   'activity:read',
   'activity:update_own',
   'activity:submit',
+  'achievement:read',
   'achievement:create',
   'report:read',
 ];
@@ -91,6 +90,9 @@ const TEACHER_PERMISSIONS: Permission[] = [
 const PRINCIPAL_PERMISSIONS: Permission[] = [
   ...TEACHER_PERMISSIONS,
   'school:update',
+  // The register is a number the whole block is measured against, so it
+  // carries the head teacher's name rather than any teacher's.
+  'enrolment:write',
   'user:invite',
   'user:approve',
   'activity:update_any',

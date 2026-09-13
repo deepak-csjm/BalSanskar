@@ -2,8 +2,8 @@ import type {
   AchievementCategory,
   AchievementLevel,
   ActivityCategory,
-  Gender,
   RiskFlag,
+  Scheme,
   SchoolType,
 } from '@balsanskar/shared';
 
@@ -94,9 +94,44 @@ export const ACHIEVEMENT_LEVEL_LABELS: Record<'hi' | 'en', Record<AchievementLev
   },
 };
 
-export const GENDER_LABELS: Record<'hi' | 'en', Record<Gender, string>> = {
-  hi: { MALE: 'बालक', FEMALE: 'बालिका', OTHER: 'अन्य' },
-  en: { MALE: 'Boy', FEMALE: 'Girl', OTHER: 'Other' },
+/**
+ * The government programmes a school's work can count towards.
+ *
+ * The Hindi is the name the programme is actually known by in a block office,
+ * not a translation of the English — a teacher tagging their work should
+ * recognise the phrase from the circular on the notice board.
+ */
+export const SCHEME_LABELS: Record<'hi' | 'en', Record<Scheme, string>> = {
+  hi: {
+    NIPUN_BHARAT: 'निपुण भारत',
+    READING_CAMPAIGN: 'पठन एवं पुस्तकालय',
+    PM_POSHAN: 'पी0एम0 पोषण (मध्याह्न भोजन)',
+    KAYAKALP: 'ऑपरेशन कायाकल्प',
+    MISSION_SHAKTI: 'मिशन शक्ति',
+    SWACHH_VIDYALAYA: 'स्वच्छ विद्यालय',
+    SCHOOL_CHALO: 'स्कूल चलो अभियान',
+    DIGITAL_LEARNING: 'डिजिटल शिक्षा',
+    KHELO_AND_HEALTH: 'खेलकूद एवं स्वास्थ्य',
+    SCIENCE_AND_MATH: 'विज्ञान एवं गणित',
+    COMMUNITY_PARTICIPATION: 'समुदाय सहभागिता',
+    TEACHER_DEVELOPMENT: 'शिक्षक प्रशिक्षण',
+    NONE: 'किसी योजना से नहीं',
+  },
+  en: {
+    NIPUN_BHARAT: 'NIPUN Bharat',
+    READING_CAMPAIGN: 'Reading and library',
+    PM_POSHAN: 'PM POSHAN (mid-day meal)',
+    KAYAKALP: 'Operation Kayakalp',
+    MISSION_SHAKTI: 'Mission Shakti',
+    SWACHH_VIDYALAYA: 'Swachh Vidyalaya',
+    SCHOOL_CHALO: 'School Chalo Abhiyan',
+    DIGITAL_LEARNING: 'Digital learning',
+    KHELO_AND_HEALTH: 'Sport and health',
+    SCIENCE_AND_MATH: 'Science and mathematics',
+    COMMUNITY_PARTICIPATION: 'Community participation',
+    TEACHER_DEVELOPMENT: 'Teacher development',
+    NONE: 'No particular programme',
+  },
 };
 
 /**
@@ -134,11 +169,10 @@ export const RISK_FLAG_LABELS: Record<'hi' | 'en', Record<RiskFlag, string>> = {
   hi: {
     PHOTO_REUSED_OTHER_SCHOOL: 'फ़ोटो किसी दूसरे विद्यालय में भी है',
     PHOTO_REUSED_OWN_SCHOOL: 'फ़ोटो इसी विद्यालय में पहले भी लगी है',
-    COUNT_EXCEEDS_ROSTER: 'बताए गए बच्चे नामांकन से अधिक',
+    COUNT_EXCEEDS_ROSTER: 'बताए गए बच्चे पंजीकरण से अधिक',
     COUNT_EXCEEDS_CLASSES: 'बताए गए बच्चे इन कक्षाओं की संख्या से अधिक',
     TEXT_REUSED: 'विवरण पहले के विवरण जैसा',
     BURST: 'थोड़े समय में बहुत सारी प्रविष्टियाँ',
-    CONSENT_GAPS: 'कुछ बच्चों की सहमति नहीं है',
     LONG_BACKDATED: 'घटना के बहुत बाद दर्ज',
     NON_WORKING_DAY: 'अवकाश के दिन की गतिविधि',
     NO_EVIDENCE: 'कोई फ़ोटो नहीं',
@@ -147,11 +181,10 @@ export const RISK_FLAG_LABELS: Record<'hi' | 'en', Record<RiskFlag, string>> = {
   en: {
     PHOTO_REUSED_OTHER_SCHOOL: 'Photo also appears at another school',
     PHOTO_REUSED_OWN_SCHOOL: 'Photo used before at this school',
-    COUNT_EXCEEDS_ROSTER: 'More children than are enrolled',
+    COUNT_EXCEEDS_ROSTER: 'More children than are on the register',
     COUNT_EXCEEDS_CLASSES: 'More children than the named classes hold',
     TEXT_REUSED: 'Write-up close to an earlier one',
     BURST: 'Many entries in a short window',
-    CONSENT_GAPS: 'Some children have no consent',
     LONG_BACKDATED: 'Filed long after the event',
     NON_WORKING_DAY: 'Dated on a holiday',
     NO_EVIDENCE: 'No photograph',
@@ -170,16 +203,16 @@ export const BLOCKER_LABELS: Record<'hi' | 'en', Record<string, string>> = {
   hi: {
     NOT_SUBMITTED: 'यह गतिविधि अभी समीक्षा हेतु नहीं भेजी गई है।',
     DESCRIPTION_TOO_SHORT: 'विवरण बहुत छोटा है।',
-    STUDENT_CONSENT_MISSING: 'किसी बच्चे की अभिभावक सहमति दर्ज नहीं है।',
-    MEDIA_CONSENT_MISSING: 'किसी फ़ोटो की सहमति की पुष्टि नहीं हुई है।',
+    CHILD_VISIBLE_CHECK_MISSING:
+      'किसी फ़ोटो के बारे में यह पुष्टि नहीं हुई है कि उसमें किसी बच्चे का चेहरा पहचान में नहीं आता।',
     VISIBILITY_ABOVE_ROLE: 'इस स्तर पर प्रकाशन का अधिकार आपके पास नहीं है।',
     VISIBILITY_ABOVE_REQUEST: 'शिक्षक ने इससे कम स्तर का अनुरोध किया था।',
   },
   en: {
     NOT_SUBMITTED: 'This activity has not been sent for review.',
     DESCRIPTION_TOO_SHORT: 'The description is too short.',
-    STUDENT_CONSENT_MISSING: 'Guardian consent is missing for a named child.',
-    MEDIA_CONSENT_MISSING: 'A photograph has not been confirmed against a consent slip.',
+    CHILD_VISIBLE_CHECK_MISSING:
+      'A photograph has not been confirmed free of an identifiable child.',
     VISIBILITY_ABOVE_ROLE: 'Your role cannot approve at that visibility.',
     VISIBILITY_ABOVE_REQUEST: 'The teacher asked for a narrower visibility.',
   },

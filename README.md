@@ -18,9 +18,9 @@ BalSanskar replaces that with something the department owns:
 - **For a district and the state** — evidence: how many schools are actually
   active, in which categories, trending which way, with every number tracing
   back to a moderated record.
-- **For a guardian** — a real say in whether their child's photograph is ever
-  shown publicly, and the ability to withdraw it at any time and have that take
-  effect immediately.
+- **For a guardian** — the certainty that this platform holds nothing about
+  their child. No name, no photograph, no phone number. See
+  [`docs/data-protection.md`](docs/data-protection.md).
 
 It is deliberately **not** a social network. There is no feed ranking, no
 follower count, no public like button and no comment box. Recognition comes from
@@ -28,11 +28,34 @@ a named officer with oversight, and it is recorded as such.
 
 ---
 
+## The one rule that shapes everything else
+
+**This platform holds no personal data about any child.** Not a name, not a
+photograph, not a guardian's phone number — not with consent, not with a signed
+slip, not "only the given name".
+
+It once did, behind a careful consent workflow, and that has been removed. The
+Digital Personal Data Protection Act treats anyone under eighteen as a child and
+its children's provisions are the strictest part of the Act; "verifiable"
+parental consent is not a standard anyone can honestly meet across 130,000
+schools; and the entire benefit purchased by that risk was printing a given name
+under a photograph.
+
+What replaced it is smaller and better. A count of children per class instead of
+a roster. An achievement recorded against a school and a class instead of a
+named pupil. Photographs of the **work** — the reading corner, the kitchen
+garden, the science model — rather than of faces, confirmed by three people who
+know the school before anything leaves it.
+
+The reasoning, the trade-offs, and the list of changes that need a conversation
+rather than a pull request are in
+[`docs/data-protection.md`](docs/data-protection.md).
+
 ## What is built
 
 | Area                                                                                                                                         | State                                                   |
 | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| Domain contracts, RBAC and child-safety policy (`packages/shared`)                                                                           | Complete, 71 unit tests                                 |
+| Domain contracts, RBAC and data-protection policy (`packages/shared`)                                                                        | Complete, 71 unit tests                                 |
 | Data model with database-level constraints (`apps/api/prisma`)                                                                               | Complete, 4 migrations                                  |
 | API: auth, schools, people, students, consent, activities, moderation, achievements, reporting, public showcase, uploads, audit (`apps/api`) | Complete, 109 integration tests against real PostgreSQL |
 | School onboarding at scale: claim a UDISE code, block office confirms it                                                                     | Complete — see [`docs/integrity.md`](docs/integrity.md) |

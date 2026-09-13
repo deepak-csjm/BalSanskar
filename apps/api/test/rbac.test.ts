@@ -2,7 +2,6 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import {
   auth,
-  createStudent,
   createTestApp,
   createUser,
   prisma,
@@ -28,7 +27,6 @@ describe('access control', () => {
   let teacherA1: TestUser;
   let teacherA1Colleague: TestUser;
   let principalA1: TestUser;
-  let teacherA2: TestUser;
   let blockAdminA1: TestUser;
   let districtAdminA: TestUser;
   let districtAdminB: TestUser;
@@ -67,13 +65,6 @@ describe('access control', () => {
       districtId: geo.districtA,
       fullName: 'Principal A1',
     });
-    teacherA2 = await createUser(app, {
-      role: 'TEACHER',
-      schoolId: geo.schoolA2,
-      blockId: geo.blockA2,
-      districtId: geo.districtA,
-      fullName: 'Teacher A2',
-    });
     blockAdminA1 = await createUser(app, {
       role: 'BLOCK_ADMIN',
       blockId: geo.blockA1,
@@ -93,72 +84,40 @@ describe('access control', () => {
     stateAdmin = await createUser(app, { role: 'STATE_ADMIN', fullName: 'State Officer' });
   });
 
-  describe('student records', () => {
-    it("hides a child's record from a teacher at another school", async () => {
-      const studentId = await createStudent(geo.schoolA1);
+  describe('the school register', () => {
+    /**
+     * What replaced a set of tests about hiding one school's children from
+     * another's teachers. There are no children's records to hide now, so what
+     * is left to protect is the register itself — a count the whole block is
+     * measured against, which only the head teacher signs.
+     */
+    it('does not let a teacher restate their school’s register', async () => {
       const response = await app.inject({
-        method: 'GET',
-        url: `/v1/students/${studentId}`,
-        headers: auth(teacherA2),
+        method: 'PUT',
+        url: `/v1/schools/${geo.schoolA1}/enrolment`,
+        headers: auth(teacherA1),
+        payload: { classes: [{ classLevel: '5', enrolled: 30 }], asOn: '2026-09-01' },
       });
       expect(response.statusCode).toBe(403);
     });
 
-    it("hides a child's record from an officer in another district", async () => {
-      const studentId = await createStudent(geo.schoolA1);
+    it('lets the head teacher record it', async () => {
       const response = await app.inject({
-        method: 'GET',
-        url: `/v1/students/${studentId}`,
-        headers: auth(districtAdminB),
-      });
-      expect(response.statusCode).toBe(403);
-    });
-
-    it('lets the block officer for that block see the record', async () => {
-      const studentId = await createStudent(geo.schoolA1);
-      const response = await app.inject({
-        method: 'GET',
-        url: `/v1/students/${studentId}`,
-        headers: auth(blockAdminA1),
+        method: 'PUT',
+        url: `/v1/schools/${geo.schoolA1}/enrolment`,
+        headers: auth(principalA1),
+        payload: { classes: [{ classLevel: '5', enrolled: 30 }], asOn: '2026-09-01' },
       });
       expect(response.statusCode).toBe(200);
+      expect((response.json() as { total: number }).total).toBe(30);
     });
 
-    it('scopes a roster listing to the caller’s own school', async () => {
-      await createStudent(geo.schoolA1, { fullName: 'Child at A1' });
-      await createStudent(geo.schoolA2, { fullName: 'Child at A2' });
-
+    it('does not let a head teacher record another school’s register', async () => {
       const response = await app.inject({
-        method: 'GET',
-        url: '/v1/students',
-        headers: auth(teacherA1),
-      });
-      const body = response.json() as { items: Array<{ fullName: string }> };
-      expect(body.items).toHaveLength(1);
-      expect(body.items[0]?.fullName).toBe('Child at A1');
-    });
-
-    it('refuses a filter that points outside the caller’s area rather than returning nothing', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: `/v1/students?schoolId=${geo.schoolA2}`,
-        headers: auth(teacherA1),
-      });
-      expect(response.statusCode).toBe(403);
-    });
-
-    it('stops a teacher creating a student at another school', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: '/v1/students',
-        headers: auth(teacherA1),
-        payload: {
-          schoolId: geo.schoolA2,
-          fullName: 'Injected Child',
-          classLevel: '3',
-          gender: 'MALE',
-          guardianName: 'Someone',
-        },
+        method: 'PUT',
+        url: `/v1/schools/${geo.schoolB1}/enrolment`,
+        headers: auth(principalA1),
+        payload: { classes: [{ classLevel: '5', enrolled: 30 }], asOn: '2026-09-01' },
       });
       expect(response.statusCode).toBe(403);
     });
@@ -376,12 +335,12 @@ describe('access control', () => {
     });
 
     it('is narrowed to the reader’s own area', async () => {
-      const studentA1 = await createStudent(geo.schoolA1);
+      // Any audited write at school A1 will do; the register is the cheapest.
       await app.inject({
-        method: 'PATCH',
-        url: `/v1/students/${studentA1}`,
-        headers: auth(teacherA1),
-        payload: { section: 'A' },
+        method: 'PUT',
+        url: `/v1/schools/${geo.schoolA1}/enrolment`,
+        headers: auth(principalA1),
+        payload: { classes: [{ classLevel: '5', enrolled: 30 }], asOn: '2026-09-01' },
       });
 
       const readerB = await app.inject({
@@ -398,7 +357,7 @@ describe('access control', () => {
         headers: auth(districtAdminA),
       });
       const events = (readerA.json() as { items: Array<{ action: string }> }).items;
-      expect(events.some((event) => event.action === 'STUDENT_UPDATED')).toBe(true);
+      expect(events.some((event) => event.action === 'ENROLMENT_RECORDED')).toBe(true);
     });
   });
 

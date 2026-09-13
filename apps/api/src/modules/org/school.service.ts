@@ -99,7 +99,7 @@ export async function getSchool(
   resolveScopeFilter(actor, { districtId: row.districtId, blockId: row.blockId, schoolId: row.id });
 
   const [studentCount, teacherCount, publishedActivityCount] = await Promise.all([
-    prisma.student.count({ where: { schoolId, isActive: true } }),
+    prisma.classEnrolment.aggregate({ where: { schoolId }, _sum: { enrolled: true } }),
     prisma.user.count({ where: { schoolId, status: 'ACTIVE' } }),
     prisma.activity.count({ where: { schoolId, status: 'PUBLISHED' } }),
   ]);
@@ -109,7 +109,7 @@ export async function getSchool(
     latitude: row.latitude,
     longitude: row.longitude,
     contactPhone: row.contactPhone,
-    studentCount,
+    studentCount: studentCount._sum.enrolled ?? 0,
     teacherCount,
     publishedActivityCount,
   };

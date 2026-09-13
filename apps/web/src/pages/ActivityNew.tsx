@@ -3,16 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import {
   ACTIVITY_CATEGORIES,
   CLASS_LEVELS,
+  MAX_SCHEMES_PER_ACTIVITY,
   MAX_UPLOAD_BYTES,
-  type ClassLevel,
+  SCHEMES,
   type ActivityDetail,
-  type Student,
+  type ClassLevel,
+  type Scheme,
   type UploadTicket,
 } from '@balsanskar/shared';
 import { NetworkError, api, uploadToTicket } from '../api/client.js';
 import { useI18n } from '../i18n/index.js';
-import { useApi, type PagedResponse } from '../lib/useApi.js';
 import { compressImage, formatBytes } from '../lib/image.js';
+import { SCHEME_LABELS } from '../lib/labels.js';
 import { perceptualHash } from '../lib/phash.js';
 import { enqueueActivity } from '../offline/outbox.js';
 import { Card, ErrorNotice, Field, PageHeading } from '../components/ui.js';
@@ -32,7 +34,7 @@ import { CATEGORY_LABELS } from '../lib/labels.js';
  * showing an error. A teacher who loses a write-up once does not come back.
  */
 export function ActivityNew() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -44,7 +46,7 @@ export function ActivityNew() {
     learningOutcome: '',
   });
   const [classLevels, setClassLevels] = useState<ClassLevel[]>([]);
-  const [studentIds, setStudentIds] = useState<string[]>([]);
+  const [schemes, setSchemes] = useState<Scheme[]>([]);
   const [photos, setPhotos] = useState<
     Array<{ blob: Blob; url: string; name: string; hash: string | null }>
   >([]);
@@ -52,8 +54,6 @@ export function ActivityNew() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [queuedNotice, setQueuedNotice] = useState(false);
-
-  const roster = useApi<PagedResponse<Student>>('/v1/students?limit=100');
 
   // Object URLs are a leak if they are not revoked; on a low-memory phone with
   // several 2 MB previews that matters.
@@ -70,12 +70,12 @@ export function ActivityNew() {
       category: form.category,
       occurredOn: form.occurredOn,
       classLevels,
-      studentIds,
+      schemes,
       tags: [],
       ...(form.participantCount ? { participantCount: Number(form.participantCount) } : {}),
       ...(form.learningOutcome ? { learningOutcome: form.learningOutcome } : {}),
     }),
-    [classLevels, form, studentIds],
+    [classLevels, form, schemes],
   );
 
   const addPhotos = async (files: FileList | null) => {
@@ -295,36 +295,35 @@ export function ActivityNew() {
             </div>
           ) : null}
 
-          {roster.data && roster.data.items.length > 0 ? (
-            <fieldset>
-              <legend>{t('activity.students')}</legend>
-              <p className="field__hint">{t('consent.explain')}</p>
-              <div className="stack">
-                {roster.data.items.map((student) => (
-                  <label key={student.id} className="checkline">
+          {/* The tag that makes an officer want this used at all: their
+              monthly scheme-wise return assembles itself from these. Capped at
+              three, because a teacher who can tick everything will. */}
+          <fieldset>
+            <legend>{t('scheme.label')}</legend>
+            <p className="field__hint">{t('scheme.hint')}</p>
+            <div className="stack">
+              {SCHEMES.filter((scheme) => scheme !== 'NONE').map((scheme) => {
+                const chosen = schemes.includes(scheme);
+                return (
+                  <label key={scheme} className="checkline">
                     <input
                       type="checkbox"
-                      checked={studentIds.includes(student.id)}
+                      checked={chosen}
+                      disabled={!chosen && schemes.length >= MAX_SCHEMES_PER_ACTIVITY}
                       onChange={(event) =>
-                        setStudentIds((current) =>
+                        setSchemes((current) =>
                           event.target.checked
-                            ? [...current, student.id]
-                            : current.filter((entry) => entry !== student.id),
+                            ? [...current, scheme]
+                            : current.filter((entry) => entry !== scheme),
                         )
                       }
                     />
-                    <span>
-                      {student.fullName}{' '}
-                      <span className="faint">
-                        ({student.classLevel})
-                        {student.mediaConsent !== 'GRANTED' ? ' · सहमति दर्ज नहीं' : ''}
-                      </span>
-                    </span>
+                    <span>{SCHEME_LABELS[locale][scheme]}</span>
                   </label>
-                ))}
-              </div>
-            </fieldset>
-          ) : null}
+                );
+              })}
+            </div>
+          </fieldset>
 
           <Field label={t('activity.learningOutcome')} htmlFor="learningOutcome">
             <textarea

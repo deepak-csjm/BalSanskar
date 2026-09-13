@@ -7,6 +7,7 @@ import {
   VISIBILITY_LEVELS,
 } from '../enums.js';
 import { CLEARANCE_STATES } from '../integrity.js';
+import { MAX_SCHEMES_PER_ACTIVITY, SCHEMES } from '../schemes.js';
 import {
   cleanMultilineText,
   cleanText,
@@ -33,8 +34,14 @@ export const createActivitySchema = z.object({
   /** Which classes took part. Empty means the whole school. */
   classLevels: z.array(z.enum(CLASS_LEVELS)).max(CLASS_LEVELS.length).default([]),
   participantCount: z.number().int().min(0).max(5000).optional(),
-  /** Students being recognised by name. Each one needs media consent before the activity can go public. */
-  studentIds: z.array(idSchema).max(200).default([]),
+  /**
+   * The government programmes this work counts towards.
+   *
+   * The reason an officer wants the platform used at all: their monthly
+   * scheme-wise return assembles itself from these instead of being typed up
+   * from a register and a WhatsApp album.
+   */
+  schemes: z.array(z.enum(SCHEMES)).max(MAX_SCHEMES_PER_ACTIVITY).default([]),
   /** Storage keys returned by the upload endpoint, in display order. */
   mediaKeys: z.array(z.string().trim().min(1).max(300)).max(10).default([]),
   tags: z.array(cleanText(2, 30)).max(8).default([]),
@@ -83,8 +90,15 @@ export const activityMediaSchema = z.object({
   width: z.number().int().nullable(),
   height: z.number().int().nullable(),
   order: z.number().int(),
-  /** A moderator has confirmed every child in this frame is covered by a consent slip. */
-  consentVerified: z.boolean(),
+  /**
+   * Somebody has confirmed no child's face is identifiable in this frame.
+   *
+   * Asserted by the teacher at upload, again by the head teacher before the
+   * work leaves the school, and seen by the block officer after that. Three
+   * people who know the school, rather than a classifier that fails quietly on
+   * exactly the photographs that matter. See docs/data-protection.md.
+   */
+  noIdentifiableChild: z.boolean(),
 });
 export type ActivityMedia = z.infer<typeof activityMediaSchema>;
 
@@ -114,14 +128,6 @@ export const activityDetailSchema = activitySummarySchema.extend({
   classLevels: z.array(z.enum(CLASS_LEVELS)),
   tags: z.array(z.string()),
   media: z.array(activityMediaSchema),
-  recognisedStudents: z.array(
-    z.object({
-      id: z.string(),
-      fullName: z.string(),
-      classLevel: z.enum(CLASS_LEVELS),
-      hasMediaConsent: z.boolean(),
-    }),
-  ),
   authorId: z.string(),
   requestedVisibility: z.enum(VISIBILITY_LEVELS).nullable(),
   submittedAt: z.string().nullable(),
@@ -185,16 +191,11 @@ export const publicActivitySchema = z.object({
     }),
   ),
   /**
-   * Children being celebrated, by given name and class only. Never a surname,
-   * a section or a roll number: enough for a village to recognise its own
-   * child, not enough for a stranger to find them.
+   * No child is named here or anywhere else in the product. The showcase
+   * celebrates a school and the teacher who did the work; a village recognises
+   * its own school without the platform holding a register of its children.
    */
-  recognisedStudents: z.array(
-    z.object({
-      displayName: z.string(),
-      classLevel: z.enum(CLASS_LEVELS),
-    }),
-  ),
+  schemes: z.array(z.enum(SCHEMES)),
   publishedAt: z.string(),
 });
 export type PublicActivity = z.infer<typeof publicActivitySchema>;

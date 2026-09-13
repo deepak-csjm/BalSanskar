@@ -53,16 +53,6 @@ export interface RiskAssessment {
 
 const activityForRisk = {
   media: { include: { asset: true } },
-  recognisedStudents: {
-    include: {
-      student: {
-        select: {
-          id: true,
-          consents: { where: { isCurrent: true }, select: { status: true }, take: 1 },
-        },
-      },
-    },
-  },
 } satisfies Prisma.ActivityInclude;
 
 type ActivityForRisk = Prisma.ActivityGetPayload<{ include: typeof activityForRisk }>;
@@ -195,28 +185,32 @@ export async function assessRisk(
     }
   }
 
-  // --- Against the school's own records -----------------------------------
+  // --- Against the school's own register ----------------------------------
+  // Counts, not a roster. A school that has not recorded its register yet
+  // reports zero, and zero has to mean "cannot say" rather than "no children":
+  // flagging every activity at every school that has not filled the form in
+  // would flood the queue on day one and teach officers to ignore it.
   if (activity.participantCount !== null) {
-    const rosterTotal = await db.student.count({
-      where: { schoolId: activity.schoolId, isActive: true },
+    const enrolled = await db.classEnrolment.aggregate({
+      where: { schoolId: activity.schoolId },
+      _sum: { enrolled: true },
     });
-    if (rosterTotal > 0 && activity.participantCount > rosterTotal) {
+    const schoolTotal = enrolled._sum.enrolled ?? 0;
+    if (schoolTotal > 0 && activity.participantCount > schoolTotal) {
       flags.push('COUNT_EXCEEDS_ROSTER');
       notes.push(
-        `${activity.participantCount} participants recorded, but the school has ${rosterTotal} children on its roster.`,
+        `${activity.participantCount} participants recorded, but the school has ${schoolTotal} children on its register.`,
       );
     } else if (activity.classLevels.length > 0) {
-      const inClasses = await db.student.count({
-        where: {
-          schoolId: activity.schoolId,
-          isActive: true,
-          classLevel: { in: activity.classLevels },
-        },
+      const inClasses = await db.classEnrolment.aggregate({
+        where: { schoolId: activity.schoolId, classLevel: { in: activity.classLevels } },
+        _sum: { enrolled: true },
       });
-      if (inClasses > 0 && activity.participantCount > inClasses) {
+      const classTotal = inClasses._sum.enrolled ?? 0;
+      if (classTotal > 0 && activity.participantCount > classTotal) {
         flags.push('COUNT_EXCEEDS_CLASSES');
         notes.push(
-          `${activity.participantCount} participants recorded, but the classes named hold ${inClasses} children.`,
+          `${activity.participantCount} participants recorded, but the classes named hold ${classTotal} children.`,
         );
       }
     }
@@ -267,17 +261,6 @@ export async function assessRisk(
   if (submittedToday >= 6 && submittedToday > submittedThisMonth - submittedToday) {
     flags.push('BURST');
     notes.push(`${submittedToday} activities submitted by this school in the last 24 hours.`);
-  }
-
-  // --- Consent ------------------------------------------------------------
-  const withoutConsent = activity.recognisedStudents.filter(
-    (link) => link.student.consents[0]?.status !== 'GRANTED',
-  ).length;
-  if (withoutConsent > 0) {
-    flags.push('CONSENT_GAPS');
-    notes.push(
-      `${withoutConsent} named ${withoutConsent === 1 ? 'child has' : 'children have'} no guardian consent on file.`,
-    );
   }
 
   // --- History ------------------------------------------------------------
@@ -433,11 +416,10 @@ function flagSentence(flag: RiskFlag): string {
   const sentences: Record<RiskFlag, string> = {
     PHOTO_REUSED_OTHER_SCHOOL: 'A photograph here has already been used by another school.',
     PHOTO_REUSED_OWN_SCHOOL: 'A photograph here was already used by this school.',
-    COUNT_EXCEEDS_ROSTER: 'More participants than the school has children on its roster.',
+    COUNT_EXCEEDS_ROSTER: 'More participants than the school has children on its register.',
     COUNT_EXCEEDS_CLASSES: 'More participants than the classes named hold.',
     TEXT_REUSED: 'The description closely repeats another recent activity from this school.',
     BURST: 'Part of an unusual burst of submissions from this school.',
-    CONSENT_GAPS: 'A named child has no guardian consent on file.',
     LONG_BACKDATED: 'Recorded long after it is said to have happened.',
     NON_WORKING_DAY: 'Dated on a Sunday.',
     NO_EVIDENCE: 'No photograph attached.',

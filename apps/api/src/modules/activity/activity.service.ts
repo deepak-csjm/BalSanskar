@@ -25,7 +25,6 @@ import { toApiClassLevels, toDbClassLevels } from '../../lib/class-level.js';
 import { getStorage } from '../../lib/storage.js';
 import { isPrismaError, PG_ERROR } from '../../lib/prisma.js';
 import type { Actor } from '../../plugins/auth.js';
-import { findStudentsWithoutConsent } from '../student/student.service.js';
 import { prepareEscalation } from './clearance.service.js';
 
 /**
@@ -47,18 +46,6 @@ const activityInclude = {
   media: {
     orderBy: { order: 'asc' },
     include: { asset: true },
-  },
-  recognisedStudents: {
-    include: {
-      student: {
-        select: {
-          id: true,
-          fullName: true,
-          classLevel: true,
-          consents: { where: { isCurrent: true }, select: { status: true }, take: 1 },
-        },
-      },
-    },
   },
   _count: { select: { media: true } },
 } satisfies Prisma.ActivityInclude;
@@ -101,16 +88,9 @@ async function toDetail(row: ActivityRow, actor: Actor): Promise<ActivityDetail>
       width: item.asset.width,
       height: item.asset.height,
       order: item.order,
-      consentVerified: item.consentVerified,
+      noIdentifiableChild: item.noIdentifiableChild,
     })),
   );
-
-  const recognisedStudents = row.recognisedStudents.map((link) => ({
-    id: link.student.id,
-    fullName: link.student.fullName,
-    classLevel: toApiClassLevels([link.student.classLevel])[0]!,
-    hasMediaConsent: link.student.consents[0]?.status === 'GRANTED',
-  }));
 
   const detail: ActivityDetail = {
     ...summary,
@@ -119,7 +99,6 @@ async function toDetail(row: ActivityRow, actor: Actor): Promise<ActivityDetail>
     classLevels: toApiClassLevels(row.classLevels),
     tags: row.tags,
     media,
-    recognisedStudents,
     authorId: row.authorId,
     requestedVisibility: row.requestedVisibility,
     submittedAt: row.submittedAt?.toISOString() ?? null,
@@ -155,10 +134,7 @@ function toPublishCandidate(row: ActivityRow, attestingNow = false) {
   return {
     status: row.status,
     hasMedia: row.media.length > 0,
-    recognisedStudentConsents: row.recognisedStudents.map(
-      (link) => link.student.consents[0]?.status ?? 'DENIED',
-    ),
-    mediaWithoutConsentCount: row.media.filter((item) => !item.consentVerified).length,
+    mediaWithoutChildCheckCount: row.media.filter((item) => !item.noIdentifiableChild).length,
     descriptionLength: row.description.length,
     clearance: row.clearance,
     attestingNow,
@@ -294,7 +270,6 @@ export async function createActivity(
     );
   }
 
-  const studentIds = await validateStudentIds(prisma, actor.schoolId, input.studentIds);
   const assetIds = await validateAssets(prisma, actor, input.mediaKeys);
 
   const created = await prisma.$transaction(async (tx) => {
@@ -312,9 +287,9 @@ export async function createActivity(
         classLevels: toDbClassLevels(input.classLevels),
         participantCount: input.participantCount ?? null,
         tags: input.tags,
+        schemes: input.schemes,
         status: 'DRAFT',
         visibility: 'SCHOOL',
-        recognisedStudents: { create: studentIds.map((studentId) => ({ studentId })) },
         media: {
           create: assetIds.map((assetId, index) => ({ assetId, order: index })),
         },
@@ -360,22 +335,10 @@ export async function updateActivity(
     throw forbidden('You can only edit activities you recorded');
   }
 
-  const studentIds =
-    input.studentIds !== undefined
-      ? await validateStudentIds(prisma, existing.schoolId, input.studentIds)
-      : null;
   const assetIds =
     input.mediaKeys !== undefined ? await validateAssets(prisma, actor, input.mediaKeys) : null;
 
   const updated = await prisma.$transaction(async (tx) => {
-    if (studentIds) {
-      await tx.activityStudent.deleteMany({ where: { activityId } });
-      if (studentIds.length > 0) {
-        await tx.activityStudent.createMany({
-          data: studentIds.map((studentId) => ({ activityId, studentId })),
-        });
-      }
-    }
     if (assetIds) {
       // Replacing the media set resets consent verification: a moderator
       // approved the old photographs, not these.
@@ -564,17 +527,18 @@ export async function moderateActivity(
   const alreadyCleared = existing.clearance === 'CLEARED' || existing.clearance === 'AUTO_CLEARED';
 
   const published = await prisma.$transaction(async (tx) => {
-    if (visibility === 'PUBLIC') {
-      // Re-read consent inside the transaction. The check above used the row
-      // loaded at the start of the request, and a guardian could have withdrawn
-      // consent in between — the one race where losing puts a child's
-      // photograph on the open web.
-      const studentIds = existing.recognisedStudents.map((link) => link.studentId);
-      const missing = await findStudentsWithoutConsent(tx, studentIds);
-      if (missing.length > 0) {
+    if (needsClearance(visibility)) {
+      // Re-read inside the transaction. The check above used the row loaded at
+      // the start of the request, and a photograph can be added or a
+      // confirmation withdrawn in between — the one race where losing sends an
+      // unchecked picture out of the school.
+      const unchecked = await tx.activityMedia.count({
+        where: { activityId, noIdentifiableChild: false },
+      });
+      if (unchecked > 0) {
         throw conflict(
-          `Guardian consent has not been recorded for: ${missing.map((s) => s.fullName).join(', ')}`,
-          'CONSENT_MISSING',
+          `${unchecked} photograph(s) have not been confirmed free of an identifiable child`,
+          'CHILD_VISIBLE_CHECK_MISSING',
         );
       }
     }
@@ -715,8 +679,8 @@ export async function setMediaConsentVerified(
     await tx.activityMedia.update({
       where: { id: mediaId },
       data: {
-        consentVerified: verified,
-        consentVerifiedAt: verified ? new Date() : null,
+        noIdentifiableChild: verified,
+        noIdentifiableChildAt: verified ? new Date() : null,
       },
     });
     await recordAudit(tx, audit, {
@@ -808,25 +772,6 @@ export async function giveAppreciation(
 // ---------------------------------------------------------------------------
 
 /** Students must exist and belong to the school the activity belongs to. */
-async function validateStudentIds(
-  prisma: PrismaClient,
-  schoolId: string,
-  studentIds: string[],
-): Promise<string[]> {
-  if (studentIds.length === 0) return [];
-  const unique = [...new Set(studentIds)];
-  const found = await prisma.student.findMany({
-    where: { id: { in: unique }, schoolId, isActive: true },
-    select: { id: true },
-  });
-  if (found.length !== unique.length) {
-    throw badRequest("One or more selected students are not on this school's active roster", {
-      studentIds: ['Unknown or inactive student'],
-    });
-  }
-  return found.map((row) => row.id);
-}
-
 /**
  * Uploaded files must belong to the caller and must not already be attached
  * elsewhere — otherwise one school could reference another school's photographs

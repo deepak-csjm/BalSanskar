@@ -15,11 +15,9 @@ import { startOutboxSync } from '../offline/sync.js';
  */
 export function Shell() {
   const { t } = useI18n();
-  const { user, may } = useAuth();
+  const { may } = useAuth();
   const online = useOnlineStatus();
   const queued = useQueuedCount();
-
-  const isSchoolStaff = user?.role === 'TEACHER' || user?.role === 'PRINCIPAL';
 
   return (
     <div className="app">
@@ -46,7 +44,9 @@ export function Shell() {
       <nav className="tabbar" aria-label={t('app.name')}>
         <Tab to="/app" icon="🏠" label={t('nav.home')} end />
         <Tab to="/app/activities" icon="📋" label={t('nav.activities')} />
-        {isSchoolStaff ? <Tab to="/app/students" icon="🧒" label={t('nav.students')} /> : null}
+        {may('enrolment:write') ? (
+          <Tab to="/app/enrolment" icon="🔢" label={t('nav.enrolment')} />
+        ) : null}
         {may('activity:moderate') ? (
           <Tab to="/app/review" icon="✅" label={t('nav.review')} />
         ) : null}

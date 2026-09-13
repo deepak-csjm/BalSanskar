@@ -2,7 +2,6 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import {
   auth,
-  createStudent,
   createTestApp,
   createUser,
   prisma,
@@ -74,6 +73,26 @@ describe('activity workflow', () => {
     });
     expect(response.statusCode).toBe(201);
     return (response.json() as { id: string }).id;
+  }
+
+  /** Attaches one photograph and returns its id on the activity. */
+  async function attachPhoto(activityId: string): Promise<string> {
+    const ticket = await app.inject({
+      method: 'POST',
+      url: '/v1/uploads',
+      headers: auth(teacher),
+      payload: { fileName: 'garden.jpg', contentType: 'image/jpeg', sizeBytes: 2048 },
+    });
+    const { key } = ticket.json() as { key: string };
+    const updated = await app.inject({
+      method: 'PATCH',
+      url: `/v1/activities/${activityId}`,
+      headers: auth(teacher),
+      payload: { mediaKeys: [key] },
+    });
+    expect(updated.statusCode).toBe(200);
+    const media = (updated.json() as { media: { id: string }[] }).media;
+    return media[0]!.id;
   }
 
   describe('lifecycle', () => {
@@ -293,187 +312,63 @@ describe('activity workflow', () => {
     });
   });
 
-  describe('consent gate', () => {
-    it('blocks a public publish when a named child has no consent on file', async () => {
-      const studentId = await createStudent(geo.schoolA1, { fullName: 'अंजलि कुमारी' });
-      const id = await createDraft({ studentIds: [studentId] });
+  describe('the photograph check', () => {
+    /**
+     * What replaced the consent gate. There is no guardian consent to be
+     * missing, because there is no child record and no photograph of a child:
+     * the only question left about an image is whether a child can be
+     * recognised in it. See docs/data-protection.md.
+     */
+    it('will not let an unchecked photograph leave the school', async () => {
+      const id = await createDraft();
+      await attachPhoto(id);
       await app.inject({
         method: 'POST',
         url: `/v1/activities/${id}/submit`,
         headers: auth(teacher),
-        payload: { requestedVisibility: 'PUBLIC' },
+        payload: { requestedVisibility: 'BLOCK' },
       });
 
-      const response = await app.inject({
+      const refused = await app.inject({
         method: 'POST',
         url: `/v1/activities/${id}/moderate`,
-        headers: auth(districtAdmin),
+        headers: auth(principal),
         payload: {
           decision: 'PUBLISH',
-          visibility: 'PUBLIC',
+          visibility: 'BLOCK',
           attestation: { confirmed: true },
         },
       });
-      expect(response.statusCode).toBe(409);
-      const message = (response.json() as { error: { message: string } }).error.message;
-      // Both gates report at once rather than one at a time.
-      expect(message).toContain('guardian consent is missing');
-      expect(message).toContain('block officer');
+      expect(refused.statusCode).toBe(409);
     });
 
-    it('allows the same publish once consent is recorded', async () => {
-      const studentId = await createStudent(geo.schoolA1);
-      const id = await createDraft({ studentIds: [studentId] });
-
-      const consent = await app.inject({
+    it('lets it through once somebody has confirmed no child is identifiable', async () => {
+      const id = await createDraft();
+      const mediaId = await attachPhoto(id);
+      await app.inject({
         method: 'POST',
-        url: `/v1/students/${studentId}/consent`,
+        url: `/v1/activities/${id}/submit`,
         headers: auth(teacher),
+        payload: { requestedVisibility: 'BLOCK' },
+      });
+      await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/media/${mediaId}/consent`,
+        headers: auth(principal),
+        payload: { verified: true },
+      });
+
+      const published = await app.inject({
+        method: 'POST',
+        url: `/v1/activities/${id}/moderate`,
+        headers: auth(principal),
         payload: {
-          status: 'GRANTED',
-          method: 'PAPER_FORM',
-          guardianName: 'राम कुमार',
-          guardianRelation: 'Father',
+          decision: 'PUBLISH',
+          visibility: 'BLOCK',
+          attestation: { confirmed: true },
         },
       });
-      expect(consent.statusCode).toBe(201);
-
-      await publishThroughGate(app, {
-        activityId: id,
-        author: teacher,
-        head: principal,
-        blockOfficer,
-        districtOfficer: districtAdmin,
-        visibility: 'PUBLIC',
-      });
-
-      const detail = await app.inject({
-        method: 'GET',
-        url: `/v1/activities/${id}`,
-        headers: auth(districtAdmin),
-      });
-      expect((detail.json() as { visibility: string }).visibility).toBe('PUBLIC');
-    });
-
-    it('does not block a publish that stays inside the platform', async () => {
-      const studentId = await createStudent(geo.schoolA1);
-      const id = await createDraft({ studentIds: [studentId] });
-      await publishThroughGate(app, {
-        activityId: id,
-        author: teacher,
-        head: principal,
-        blockOfficer,
-        visibility: 'DISTRICT',
-      });
-
-      const detail = await app.inject({
-        method: 'GET',
-        url: `/v1/activities/${id}`,
-        headers: auth(districtAdmin),
-      });
-      // No consent on file, and it still reaches district level: the consent
-      // gate guards the open web, not the department's own systems.
-      expect((detail.json() as { visibility: string }).visibility).toBe('DISTRICT');
-    });
-
-    it('pulls published work off the open web the moment consent is withdrawn', async () => {
-      const studentId = await createStudent(geo.schoolA1);
-      await app.inject({
-        method: 'POST',
-        url: `/v1/students/${studentId}/consent`,
-        headers: auth(teacher),
-        payload: { status: 'GRANTED', method: 'PAPER_FORM', guardianName: 'राम कुमार' },
-      });
-      const id = await createDraft({ studentIds: [studentId] });
-      await publishThroughGate(app, {
-        activityId: id,
-        author: teacher,
-        head: principal,
-        blockOfficer,
-        districtOfficer: districtAdmin,
-        visibility: 'PUBLIC',
-      });
-
-      const beforeRevoke = await app.inject({ method: 'GET', url: `/v1/public/activities/${id}` });
-      expect(beforeRevoke.statusCode).toBe(200);
-
-      const revoked = await app.inject({
-        method: 'POST',
-        url: `/v1/students/${studentId}/consent/revoke`,
-        headers: auth(teacher),
-        payload: { reason: 'The family asked us to take the photograph down.' },
-      });
-      expect(revoked.statusCode).toBe(200);
-      expect(
-        (revoked.json() as { unpublishedActivityCount: number }).unpublishedActivityCount,
-      ).toBe(1);
-
-      const afterRevoke = await app.inject({ method: 'GET', url: `/v1/public/activities/${id}` });
-      expect(afterRevoke.statusCode).toBe(404);
-
-      // The record itself survives — it is evidence — but only inside the platform.
-      const stored = await prisma().activity.findUniqueOrThrow({ where: { id } });
-      expect(stored.status).toBe('PUBLISHED');
-      expect(stored.visibility).toBe('DISTRICT');
-    });
-
-    it('keeps the whole consent history, superseding rather than overwriting', async () => {
-      const studentId = await createStudent(geo.schoolA1);
-      await app.inject({
-        method: 'POST',
-        url: `/v1/students/${studentId}/consent`,
-        headers: auth(teacher),
-        payload: { status: 'DENIED', method: 'VERBAL_IN_PERSON', guardianName: 'राम कुमार' },
-      });
-      await app.inject({
-        method: 'POST',
-        url: `/v1/students/${studentId}/consent`,
-        headers: auth(teacher),
-        payload: { status: 'GRANTED', method: 'PAPER_FORM', guardianName: 'राम कुमार' },
-      });
-
-      const history = await app.inject({
-        method: 'GET',
-        url: `/v1/students/${studentId}/consent`,
-        headers: auth(teacher),
-      });
-      const items = (history.json() as { items: Array<{ status: string }> }).items;
-      expect(items).toHaveLength(2);
-      expect(items[0]?.status).toBe('GRANTED');
-
-      const current = await prisma().mediaConsent.count({ where: { studentId, isCurrent: true } });
-      expect(current).toBe(1);
-    });
-
-    it('will not let the database hold two current decisions for one child', async () => {
-      const studentId = await createStudent(geo.schoolA1, { consent: 'GRANTED' });
-      // Bypass the service and write straight to the table, as a buggy import
-      // or a hand-run UPDATE would.
-      await expect(
-        prisma().mediaConsent.create({
-          data: {
-            studentId,
-            status: 'GRANTED',
-            method: 'PAPER_FORM',
-            guardianName: 'Someone else',
-            recordedById: teacher.id,
-            isCurrent: true,
-          },
-        }),
-      ).rejects.toThrow();
-    });
-  });
-
-  describe('recognised students', () => {
-    it('rejects a student from another school', async () => {
-      const otherSchoolStudent = await createStudent(geo.schoolA2);
-      const response = await app.inject({
-        method: 'POST',
-        url: '/v1/activities',
-        headers: auth(teacher),
-        payload: { ...validActivityPayload, studentIds: [otherSchoolStudent] },
-      });
-      expect(response.statusCode).toBe(400);
+      expect(published.statusCode).toBe(200);
     });
   });
 

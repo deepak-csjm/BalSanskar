@@ -1,6 +1,6 @@
 // BalSanskar data model.
 //
-// Shape of the domain: Uttar Pradesh -> District -> Block -> School -> (Teachers, Students).
+// Shape of the domain: Uttar Pradesh -> District -> Block -> School -> Teachers.
 // Everything a school produces (activities, achievements) hangs off the school and
 // carries denormalised districtId/blockId so that district- and block-level
 // reporting is a single indexed scan rather than a three-table join over
@@ -44,12 +44,6 @@ enum SchoolType {
   UPPER_PRIMARY
   COMPOSITE
   KASTURBA_GANDHI
-  OTHER
-}
-
-enum Gender {
-  MALE
-  FEMALE
   OTHER
 }
 
@@ -123,16 +117,22 @@ enum VerificationStatus {
   REJECTED
 }
 
-enum ConsentStatus {
-  GRANTED
-  DENIED
-  REVOKED
-}
-
-enum ConsentMethod {
-  PAPER_FORM
-  VERBAL_IN_PERSON
-  DIGITAL_SELF_SERVE
+/// The government programmes a school's work can count towards. Mirrored in
+/// packages/shared/src/schemes.ts.
+enum Scheme {
+  NIPUN_BHARAT
+  READING_CAMPAIGN
+  PM_POSHAN
+  KAYAKALP
+  MISSION_SHAKTI
+  SWACHH_VIDYALAYA
+  SCHOOL_CHALO
+  DIGITAL_LEARNING
+  KHELO_AND_HEALTH
+  SCIENCE_AND_MATH
+  COMMUNITY_PARTICIPATION
+  TEACHER_DEVELOPMENT
+  NONE
 }
 
 enum MediaKind {
@@ -267,7 +267,7 @@ model School {
   lastReturnedAt DateTime?
 
   users        User[]
-  students     Student[]
+  enrolments   ClassEnrolment[]
   activities   Activity[]
   achievements Achievement[]
   claims       SchoolClaim[]
@@ -280,6 +280,31 @@ model School {
   @@index([nameHi])
   @@index([status])
   @@map("schools")
+}
+
+/// How many children are on the register in each class.
+///
+/// The whole of what this platform knows about a school's children. There is no
+/// child record and there will not be one: see docs/data-protection.md. A count
+/// is enough to notice a school reporting more participants than it teaches, and
+/// enough for every return the department asks for.
+model ClassEnrolment {
+  id         String     @id @default(cuid())
+  schoolId   String
+  school     School     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classLevel ClassLevel
+  enrolled   Int
+  /// The date the register was read, so an officer can ask about a discrepancy.
+  asOn       DateTime   @db.Date
+
+  updatedById String?
+  updatedBy   User?   @relation("EnrolmentUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([schoolId, classLevel])
+  @@map("class_enrolments")
 }
 
 /// A head teacher's claim on a school, waiting for the block office.
@@ -379,9 +404,8 @@ model User {
   attestedActivities   Activity[]    @relation("ActivityAttestor")
   clearedActivities    Activity[]    @relation("ActivityClearance")
   reviewedClaims       SchoolClaim[] @relation("ClaimReviewer")
-  createdStudents      Student[]     @relation("StudentCreatedBy")
-  recordedConsents     MediaConsent[] @relation("ConsentRecordedBy")
-  revokedConsents      MediaConsent[] @relation("ConsentRevokedBy")
+  updatedEnrolments    ClassEnrolment[] @relation("EnrolmentUpdatedBy")
+  creditedAchievements Achievement[] @relation("AchievementCredited")
   createdAchievements  Achievement[] @relation("AchievementCreatedBy")
   verifiedAchievements Achievement[] @relation("AchievementVerifiedBy")
   appreciations        Appreciation[]
@@ -447,71 +471,6 @@ model RefreshToken {
 // Children
 // ---------------------------------------------------------------------------
 
-model Student {
-  id         String     @id @default(cuid())
-  schoolId   String
-  school     School     @relation(fields: [schoolId], references: [id], onDelete: Restrict)
-  fullName   String
-  classLevel ClassLevel
-  section    String?
-  rollNumber String?
-  gender     Gender
-  /// Year only. Enough to sanity-check the class, not enough to identify a child.
-  birthYear  Int?
-  guardianName  String
-  guardianPhone String?
-  isActive   Boolean    @default(true)
-
-  createdById String?
-  createdBy   User?   @relation("StudentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-
-  consents     MediaConsent[]
-  achievements Achievement[]
-  activities   ActivityStudent[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([schoolId, classLevel, section, rollNumber], name: "student_roll_in_class")
-  @@index([schoolId, classLevel])
-  @@index([schoolId, isActive])
-  @@map("students")
-}
-
-/// A guardian's decision about their child's photograph being published.
-///
-/// Append-only: a new decision supersedes the previous one and the history stays
-/// readable, because "who said the parents agreed, and when" is exactly the
-/// question an inquiry would ask.
-model MediaConsent {
-  id              String        @id @default(cuid())
-  studentId       String
-  student         Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  status          ConsentStatus
-  method          ConsentMethod
-  guardianName    String
-  guardianRelation String?
-  /// Storage key of the scanned consent slip, if the school captured one.
-  documentKey     String?
-  note            String?
-
-  recordedById String
-  recordedBy   User   @relation("ConsentRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
-  recordedAt   DateTime @default(now())
-
-  revokedById String?
-  revokedBy   User?     @relation("ConsentRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
-  revokedAt   DateTime?
-  revokeReason String?
-
-  /// True for exactly one row per student: the decision currently in force.
-  /// Enforced by a partial unique index in the migration.
-  isCurrent Boolean @default(true)
-
-  @@index([studentId, recordedAt])
-  @@map("media_consents")
-}
-
 // ---------------------------------------------------------------------------
 // The work of the school
 // ---------------------------------------------------------------------------
@@ -536,6 +495,9 @@ model Activity {
   classLevels      ClassLevel[]
   participantCount Int?
   tags             String[]
+  /// The government programmes this work counts towards, so a block officer's
+  /// monthly scheme-wise return assembles itself instead of being typed up.
+  schemes          Scheme[]  @default([])
 
   status              ActivityStatus   @default(DRAFT)
   visibility          VisibilityLevel  @default(SCHOOL)
@@ -579,7 +541,6 @@ model Activity {
   riskNotes String[]
 
   media             ActivityMedia[]
-  recognisedStudents ActivityStudent[]
   appreciations     Appreciation[]
 
   appreciationCount Int @default(0)
@@ -649,28 +610,17 @@ model ActivityMedia {
   caption    String?
   order      Int        @default(0)
 
-  /// Set by a moderator to confirm that every recognisable child in this frame
-  /// is covered by a consent slip. Required before PUBLIC visibility.
-  consentVerified   Boolean   @default(false)
-  consentVerifiedAt DateTime?
+  /// Confirmation that no child's face is identifiable in this frame. Asserted
+  /// at upload, again by the head teacher, and seen by the block officer.
+  /// Required before the activity can leave its own school.
+  noIdentifiableChild   Boolean   @default(false)
+  noIdentifiableChildAt DateTime?
 
   createdAt DateTime @default(now())
 
   @@unique([activityId, assetId])
   @@index([activityId, order])
   @@map("activity_media")
-}
-
-model ActivityStudent {
-  activityId String
-  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  studentId  String
-  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
-
-  @@id([activityId, studentId])
-  @@index([studentId])
-  @@map("activity_students")
 }
 
 /// Recognition from an officer with oversight. The deliberate alternative to a
@@ -690,9 +640,14 @@ model Appreciation {
 }
 
 model Achievement {
-  id         String   @id @default(cuid())
-  studentId  String
-  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id         String     @id @default(cuid())
+  /// The class the recognised children were in. Never who they were.
+  classLevel ClassLevel
+  /// How many children from this school were recognised. Usually one.
+  childrenRecognised Int @default(1)
+  /// The teacher who guided it, because somebody did.
+  creditedTeacherId String?
+  creditedTeacher   User?   @relation("AchievementCredited", fields: [creditedTeacherId], references: [id], onDelete: SetNull)
   schoolId   String
   school     School   @relation(fields: [schoolId], references: [id], onDelete: Restrict)
   blockId    String
@@ -721,7 +676,7 @@ model Achievement {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([studentId])
+  @@index([classLevel])
   @@index([schoolId, status])
   @@index([blockId, status, awardedOn])
   @@index([districtId, status, awardedOn])

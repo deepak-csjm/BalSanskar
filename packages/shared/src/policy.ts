@@ -1,7 +1,6 @@
 import {
   VISIBILITY_RANK,
   type ActivityStatus,
-  type ConsentStatus,
   type UserRole,
   type VisibilityLevel,
 } from './enums.js';
@@ -12,19 +11,24 @@ import { needsClearance, type ClearanceState } from './integrity.js';
  * Child-safety and workflow rules that both the server and the browser need to
  * agree on.
  *
- * They live in shared code so that a teacher sees "two guardians have not
- * signed the consent slip" on the screen *before* submitting, and the server
- * re-checks exactly the same rules before publishing. The browser copy is a
- * courtesy; the server copy is the control.
+ * They live in shared code so that a teacher sees what is missing on the screen
+ * *before* submitting, and the server re-checks exactly the same rules before
+ * publishing. The browser copy is a courtesy; the server copy is the control.
  */
 
 export interface PublishCandidate {
   status: ActivityStatus;
   hasMedia: boolean;
-  /** Consent state of every student named on the activity. */
-  recognisedStudentConsents: ConsentStatus[];
-  /** Media the school has not confirmed a consent slip for. */
-  mediaWithoutConsentCount: number;
+  /**
+   * Photographs nobody has confirmed are free of an identifiable child.
+   *
+   * This replaced a pair of guardian-consent checks. The platform no longer
+   * holds a child's name, so there is no consent to be missing — the only
+   * question left about a photograph is whether a child can be recognised in
+   * it, and that question is answered by three people who know the school.
+   * See docs/data-protection.md.
+   */
+  mediaWithoutChildCheckCount: number;
   descriptionLength: number;
   /** How far the activity has got through the gate out of its school. */
   clearance?: ClearanceState;
@@ -35,8 +39,8 @@ export interface PublishCandidate {
 export const PUBLISH_BLOCKERS = {
   NOT_SUBMITTED: 'NOT_SUBMITTED',
   DESCRIPTION_TOO_SHORT: 'DESCRIPTION_TOO_SHORT',
-  STUDENT_CONSENT_MISSING: 'STUDENT_CONSENT_MISSING',
-  MEDIA_CONSENT_MISSING: 'MEDIA_CONSENT_MISSING',
+  /** A photograph nobody has confirmed is free of an identifiable child. */
+  CHILD_VISIBLE_CHECK_MISSING: 'CHILD_VISIBLE_CHECK_MISSING',
   VISIBILITY_ABOVE_ROLE: 'VISIBILITY_ABOVE_ROLE',
   VISIBILITY_ABOVE_REQUEST: 'VISIBILITY_ABOVE_REQUEST',
   /** Leaving the school needs the head teacher's named statement. */
@@ -117,16 +121,12 @@ export function evaluatePublishBlockers(
     blockers.push(PUBLISH_BLOCKERS.BLOCK_CLEARANCE_REQUIRED);
   }
 
-  // Consent gates apply only when the work leaves the department's own systems.
-  // Inside the platform every viewer is an accountable, named government
-  // employee; on the open web they are not.
-  if (visibility === 'PUBLIC') {
-    if (activity.recognisedStudentConsents.some((consent) => consent !== 'GRANTED')) {
-      blockers.push(PUBLISH_BLOCKERS.STUDENT_CONSENT_MISSING);
-    }
-    if (activity.hasMedia && activity.mediaWithoutConsentCount > 0) {
-      blockers.push(PUBLISH_BLOCKERS.MEDIA_CONSENT_MISSING);
-    }
+  // Every photograph leaving the school must have been looked at, whatever the
+  // destination. Unlike the consent rule this replaced, it does not wait for
+  // PUBLIC: an identifiable child reaching a district dashboard is the same
+  // failure as one reaching the open web, just with a smaller audience.
+  if (needsClearance(visibility) && activity.hasMedia && activity.mediaWithoutChildCheckCount > 0) {
+    blockers.push(PUBLISH_BLOCKERS.CHILD_VISIBLE_CHECK_MISSING);
   }
 
   return blockers;

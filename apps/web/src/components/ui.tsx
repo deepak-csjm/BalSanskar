@@ -1,10 +1,5 @@
 import type { ReactNode } from 'react';
-import type {
-  ActivityStatus,
-  ConsentStatus,
-  VerificationStatus,
-  VisibilityLevel,
-} from '@balsanskar/shared';
+import type { ActivityStatus, VerificationStatus, VisibilityLevel } from '@balsanskar/shared';
 import { useI18n } from '../i18n/index.js';
 
 /**
@@ -142,17 +137,6 @@ export function VisibilityTag({ visibility }: { visibility: VisibilityLevel }) {
       {t(`visibility.${visibility}`)}
     </span>
   );
-}
-
-export function ConsentTag({ status }: { status: ConsentStatus | null }) {
-  const { t } = useI18n();
-  if (status === 'GRANTED')
-    return <span className="tag tag--green">{t('consent.status.GRANTED')}</span>;
-  if (status === 'DENIED')
-    return <span className="tag tag--danger">{t('consent.status.DENIED')}</span>;
-  if (status === 'REVOKED')
-    return <span className="tag tag--danger">{t('consent.status.REVOKED')}</span>;
-  return <span className="tag tag--ochre">{t('consent.status.NONE')}</span>;
 }
 
 export function VerificationTag({ status }: { status: VerificationStatus }) {

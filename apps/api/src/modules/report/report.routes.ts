@@ -63,7 +63,7 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
         'Active schools',
         'Published activities',
         'Verified achievements',
-        'Students recognised',
+        'Child participations',
         'Last activity',
       ],
       board.rows.map((row) => [
@@ -73,7 +73,7 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
         row.activeSchools,
         row.publishedActivities,
         row.verifiedAchievements,
-        row.studentsRecognised,
+        row.childParticipations,
         row.lastActivityAt?.slice(0, 10) ?? '',
       ]),
     );
