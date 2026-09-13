@@ -62,20 +62,20 @@ export function VillageSchool() {
           UDISE {data.udiseCode}
         </p>
 
-        <Card>
-          <div className="row" style={{ gap: '1.5rem' }}>
-            <Stat value={String(data.enrolment.total)} label={t('village.children')} />
-            {data.enrolment.asOn ? (
-              <Stat value={d(data.enrolment.asOn)} label={t('enrolment.asOn')} />
-            ) : null}
-          </div>
-          <p className="faint" style={{ marginBottom: 0 }}>
-            {t('village.privacy')}
-          </p>
-        </Card>
-
-        {/* What the village can do, first — above the work, because a
-            noticeboard that only reports is a noticeboard nobody returns to. */}
+        {/* What the village can do, first — above everything, including the
+            school's own numbers.
+            A randomised trial run in Jaunpur in this very state tested almost
+            exactly this page's theory of change: informing a community about
+            its village education committee, and publishing report cards,
+            reportedly moved nothing — not participation, not teacher effort,
+            not learning. What moved learning was the arm that gave volunteers
+            a concrete task to do. If that holds, a page that only informs is a
+            page that does nothing, and the only part of it that earns its place
+            is the part a reader can act on before they close the tab.
+            NOTE: the citation is from research run for this repo and could not
+            be retrieved directly — see docs/evidence.md. The ordering is
+            defensible without it, but the claim should not be repeated as
+            established until somebody reads the paper. */}
         {data.openNeeds.length > 0 ? (
           <Card>
             <h2>{t('village.needs')}</h2>
@@ -199,6 +199,43 @@ export function VillageSchool() {
             </p>
           </Card>
         ) : null}
+
+        {/* The register, deliberately not the headline.
+            Two findings pull in opposite directions here and this is the
+            synthesis. After the June 2025 school-pairing order, a public
+            headcount on a school page is read by teachers as evidence for
+            closing their school and abolishing their post — which would make
+            them suppress activity at exactly the small schools that most need
+            visibility. But a dated figure the school itself controls is also
+            the thing that makes a wrong merger list contestable, and the
+            High Court found schools above the threshold on that list.
+            So: kept, dated, attributed to the school's own register, and
+            placed where a number belongs rather than where a verdict does. */}
+        <Card>
+          <h2>{t('village.register')}</h2>
+          <p style={{ margin: '0 0 0.3rem' }}>
+            {t('village.childrenOnRegister')}: <strong>{data.enrolment.total}</strong>
+            {data.enrolment.asOn ? (
+              <span className="faint">
+                {' '}
+                · {t('enrolment.asOn')} {d(data.enrolment.asOn)}
+              </span>
+            ) : null}
+          </p>
+          <p className="faint" style={{ marginBottom: '0.5rem' }}>
+            {t('village.privacy')}
+          </p>
+          {/* The department's own record for the same school. Linked rather
+              than restated: duplicating UDISE+ would put this platform in the
+              position of contradicting the official figure. */}
+          <p className="faint" style={{ marginBottom: 0 }}>
+            {t('village.officialRecord')}{' '}
+            <a href="https://kys.udiseplus.gov.in/" target="_blank" rel="noreferrer noopener">
+              kys.udiseplus.gov.in
+            </a>{' '}
+            · UDISE {data.udiseCode}
+          </p>
+        </Card>
 
         <Card>
           <h2>{t('village.somethingWrong')}</h2>

@@ -44,6 +44,7 @@ const Enrolment = lazy(() =>
 const Reports = lazy(() => import('./pages/Reports.js').then((m) => ({ default: m.Reports })));
 const People = lazy(() => import('./pages/People.js').then((m) => ({ default: m.People })));
 const Claims = lazy(() => import('./pages/Claims.js').then((m) => ({ default: m.Claims })));
+const Duty = lazy(() => import('./pages/Duty.js').then((m) => ({ default: m.Duty })));
 const Waiting = lazy(() => import('./pages/Waiting.js').then((m) => ({ default: m.Waiting })));
 const Clearance = lazy(() =>
   import('./pages/Clearance.js').then((m) => ({ default: m.Clearance })),
@@ -85,6 +86,7 @@ export function App() {
                 {/* The reciprocal half of the gate: not what the school owes,
                     but what the offices above it owe the school. */}
                 <Route path="waiting" element={<Waiting />} />
+                <Route path="duty" element={<Duty />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="people" element={<People />} />
                 <Route path="claims" element={<Claims />} />

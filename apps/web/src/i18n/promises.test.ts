@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { FORBIDDEN_FEATURES, GUARANTEE_STATEMENTS, PLATFORM_GUARANTEES } from '@balsanskar/shared';
-import { strings } from './strings.js';
+import { hi } from './tables/hi.js';
+import { en } from './tables/en.js';
+
+const strings = { hi, en } as const;
 
 /**
  * The promises page is the first thing a sceptical teacher reads, and it is

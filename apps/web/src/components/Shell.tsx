@@ -48,6 +48,7 @@ export function Shell() {
             a teacher somebody else owes them something is the one that makes
             this platform theirs rather than another thing measuring them. */}
         <Tab to="/app/waiting" icon="⏳" label={t('nav.waiting')} />
+        {may('duty:write') ? <Tab to="/app/duty" icon="📅" label={t('nav.duty')} /> : null}
         {may('enrolment:write') ? (
           <Tab to="/app/enrolment" icon="🔢" label={t('nav.enrolment')} />
         ) : null}

@@ -51,6 +51,17 @@ export const PERMISSIONS = [
    */
   'village:write',
 
+  /**
+   * Teaching days the state's own demands consumed.
+   *
+   * Held by every teacher for their own days, because it is their record and
+   * their honorarium claim. Attesting somebody else's is the head teacher's
+   * job and rides on `activity:moderate`, which they already hold — a separate
+   * permission would suggest this is a separate kind of authority, and it is
+   * not: it is the same act of saying "yes, this happened here".
+   */
+  'duty:write',
+
   // Work of the school
   'activity:create',
   'activity:read',
@@ -91,6 +102,7 @@ const TEACHER_PERMISSIONS: Permission[] = [
   'activity:update_own',
   'activity:submit',
   'village:write',
+  'duty:write',
   'achievement:read',
   'achievement:create',
   'report:read',

@@ -4,6 +4,7 @@ import { authRoutes } from '../modules/auth/auth.routes.js';
 import { orgRoutes } from '../modules/org/org.routes.js';
 import { claimRoutes } from '../modules/org/claim.routes.js';
 import { schoolRecordRoutes } from '../modules/school-record/school-record.routes.js';
+import { dutyRoutes } from '../modules/duty/duty.routes.js';
 import { villageRoutes } from '../modules/village/village.routes.js';
 import { waitingRoutes } from '../modules/waiting/waiting.routes.js';
 import { activityRoutes } from '../modules/activity/activity.routes.js';
@@ -36,6 +37,7 @@ export const registerRoutes: FastifyPluginAsync = async (app) => {
   await app.register(orgRoutes);
   await app.register(claimRoutes);
   await app.register(schoolRecordRoutes);
+  await app.register(dutyRoutes);
   await app.register(villageRoutes);
   await app.register(waitingRoutes);
   await app.register(activityRoutes);

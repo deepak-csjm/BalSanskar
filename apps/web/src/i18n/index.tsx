@@ -1,13 +1,27 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type Locale } from '@balsanskar/shared';
-import { strings, type TranslationKey } from './strings.js';
+import { hi, type TranslationKey } from './strings.js';
 
 /**
  * Translation, held deliberately small.
  *
- * No i18n library: the whole string table is a few kilobytes, there is no
- * pluralisation or gender agreement to negotiate in these strings, and a
- * dependency here would cost more than it saves on a 2G connection.
+ * No i18n library: there is no pluralisation or gender agreement to negotiate
+ * in these strings, and a dependency here would cost more than it saves on a
+ * 2G connection.
+ *
+ * Only the language being read is downloaded. Hindi is bundled with the first
+ * load because it is the default and what almost every teacher will see;
+ * English arrives as a separate chunk if somebody switches to it. A reader who
+ * has asked for English waits for that chunk on the boot screen rather than
+ * watching the interface change language under them.
  */
 
 const STORAGE_KEY = 'balsanskar.locale';
@@ -40,6 +54,29 @@ function readStoredLocale(): Locale {
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(readStoredLocale);
+  /**
+   * The tables that have been loaded, seeded with the one that ships eagerly.
+   *
+   * A cache rather than a single current table, so that switching back to a
+   * language already fetched is instant and costs no second request. Hindi is
+   * present from the first render, which is why the common case never sees a
+   * pending state at all.
+   */
+  const [tables, setTables] = useState<Partial<Record<Locale, Record<TranslationKey, string>>>>(
+    () => ({ hi }),
+  );
+  const table = tables[locale] ?? null;
+
+  useEffect(() => {
+    if (table) return;
+    let cancelled = false;
+    void import('./tables/en.js').then((module) => {
+      if (!cancelled) setTables((current) => ({ ...current, en: module.en }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [table]);
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
@@ -51,8 +88,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = next;
   }, []);
 
-  const value = useMemo<I18nValue>(() => {
-    const table = strings[locale];
+  const value = useMemo<I18nValue | null>(() => {
+    if (!table) return null;
     const numberFormat = new Intl.NumberFormat(locale === 'hi' ? 'hi-IN' : 'en-IN');
     const dateFormat = new Intl.DateTimeFormat(locale === 'hi' ? 'hi-IN' : 'en-IN', {
       day: 'numeric',
@@ -69,7 +106,18 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         return Number.isNaN(date.getTime()) ? '—' : dateFormat.format(date);
       },
     };
-  }, [locale, setLocale]);
+  }, [locale, setLocale, table]);
+
+  // Only ever reached by a reader who has chosen English, and only until their
+  // language chunk lands. It reuses the boot markup from index.html rather than
+  // rendering a spinner, so the transition is one screen and not two.
+  if (!value) {
+    return (
+      <div className="boot">
+        <p lang="en">Loading…</p>
+      </div>
+    );
+  }
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }

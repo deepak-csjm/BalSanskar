@@ -136,6 +136,21 @@ enum Scheme {
 }
 
 /// What a village can actually give a school. See contracts/village.ts.
+/// The three purposes the Right to Education Act permits a teacher to be
+/// deployed for, named exactly as s.27 names them, and then everything else.
+/// See packages/shared/src/contracts/duty.ts.
+enum DutyCategory {
+  CENSUS
+  ELECTION
+  DISASTER_RELIEF
+  SURVEY
+  DATA_ENTRY
+  TRAINING
+  MEETING
+  PROVISIONING
+  OTHER
+}
+
 enum NeedKind {
   MATERIAL
   REPAIR
@@ -230,6 +245,7 @@ model District {
   users        User[]
   activities   Activity[]
   achievements Achievement[]
+  duties       DutyRecord[]
   needs        SchoolNeed[]
   smcMeetings  SmcMeeting[]
   surveys      HabitationSurvey[]
@@ -254,6 +270,7 @@ model Block {
   users        User[]
   activities   Activity[]
   achievements Achievement[]
+  duties       DutyRecord[]
   needs        SchoolNeed[]
   smcMeetings  SmcMeeting[]
   surveys      HabitationSurvey[]
@@ -300,6 +317,7 @@ model School {
 
   users        User[]
   enrolments   ClassEnrolment[]
+  duties       DutyRecord[]
   needs        SchoolNeed[]
   smcMeetings  SmcMeeting[]
   surveys      HabitationSurvey[]
@@ -323,6 +341,69 @@ model School {
 /// is met when the head teacher says somebody turned up and did the thing.
 /// Handling money would bring payment regulation, an audit duty, and — far
 /// worse for a school — the suspicion that somebody is collecting.
+/// Teaching days a teacher spent on work that is not teaching.
+///
+/// Not a new instrument: UDISE+ already collects this as Data Capture Format
+/// field 3.3.25, self-declared once a year, aggregated to nothing and published
+/// nowhere. This makes the same statutory number timely and legible.
+///
+/// The teacher's own record. Above the school it aggregates to a school total
+/// with no name attached, because a record of days lost reads in the wrong
+/// hands as a record of absence, and this state enforces deployment by
+/// withholding salary.
+model DutyRecord {
+  id         String   @id @default(cuid())
+  schoolId   String
+  school     School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  blockId    String
+  block      Block    @relation(fields: [blockId], references: [id], onDelete: Restrict)
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Restrict)
+
+  /// Whose days these were. Visible inside the school and never above it.
+  teacherId String
+  teacher   User   @relation("DutyTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  category       DutyCategory
+  description    String
+  /// The order that assigned the duty. Deliberately not the officer who signed
+  /// it: a platform that names them becomes an accusation engine, and the
+  /// district officer who would have to publish it is personally exposed.
+  orderReference String?
+
+  fromDate          DateTime @db.Date
+  toDate            DateTime @db.Date
+  /// Days the school was actually open. Not the length of the span.
+  teachingDaysLost  Int
+  /// Whether any of it fell inside school hours — the fact the Allahabad High
+  /// Court's Division Bench made decisive, and which nothing records today.
+  duringSchoolHours Boolean  @default(false)
+
+  /// The entitlement half. A BLO honorarium is roughly Rs 12,000 a cycle with a
+  /// further Rs 6,000 for the Special Intensive Revision, and non-payment has
+  /// been a live dispute. The gap between these two columns is the point.
+  honorariumDueRupees      Int?
+  honorariumReceivedRupees Int?
+
+  note String?
+
+  /// The head teacher's confirmation that this school really did lose these
+  /// days. Without it the number is one person's word; with it, it is the
+  /// school's record.
+  attestedById String?
+  attestedBy   User?     @relation("DutyAttestor", fields: [attestedById], references: [id], onDelete: SetNull)
+  attestedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([schoolId, fromDate])
+  @@index([blockId, fromDate])
+  @@index([districtId, fromDate])
+  @@index([teacherId, fromDate])
+  @@map("duty_records")
+}
+
 model SchoolNeed {
   id         String   @id @default(cuid())
   schoolId   String
@@ -567,6 +648,8 @@ model User {
   reviewedClaims       SchoolClaim[]      @relation("ClaimReviewer")
   updatedEnrolments    ClassEnrolment[]   @relation("EnrolmentUpdatedBy")
   createdNeeds         SchoolNeed[]       @relation("NeedCreatedBy")
+  dutyRecords          DutyRecord[]       @relation("DutyTeacher")
+  dutyAttestations     DutyRecord[]       @relation("DutyAttestor")
   recordedSmcMeetings  SmcMeeting[]       @relation("SmcRecordedBy")
   answeredSmcMeetings  SmcMeeting[]       @relation("SmcAnsweredBy")
   recordedSurveys      HabitationSurvey[] @relation("SurveyRecordedBy")
