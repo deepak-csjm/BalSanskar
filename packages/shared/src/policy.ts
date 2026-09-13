@@ -164,15 +164,3 @@ export function canEditActivity(
   if (isAuthor) return true;
   return role !== 'TEACHER';
 }
-
-/**
- * The public display name for a child: given name only.
- *
- * Deliberately lossy. "Anjali" celebrated in her village is recognition;
- * "Anjali Kumari, Class 5, Primary School Rampur, Shravasti" indexed by a
- * search engine is a safeguarding incident.
- */
-export function publicDisplayName(fullName: string): string {
-  const first = fullName.trim().split(/\s+/)[0] ?? '';
-  return first;
-}

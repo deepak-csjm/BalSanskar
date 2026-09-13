@@ -12,7 +12,6 @@ import {
   isWithinScope,
   maxApprovableVisibility,
   normalisePhone,
-  publicDisplayName,
   requiredScopeFields,
   sanitiseText,
   USER_ROLES,
@@ -78,18 +77,6 @@ describe('text sanitisation', () => {
 
   it('keeps Devanagari, newlines and tabs', () => {
     expect(sanitiseText('प्राथमिक विद्यालय\nरामपुर\tA')).toBe('प्राथमिक विद्यालय\nरामपुर\tA');
-  });
-});
-
-describe('public display name', () => {
-  it('keeps only the given name', () => {
-    expect(publicDisplayName('अंजलि कुमारी')).toBe('अंजलि');
-    expect(publicDisplayName('Ravi Kumar Yadav')).toBe('Ravi');
-  });
-
-  it('handles a single-word name and stray whitespace', () => {
-    expect(publicDisplayName('  Anjali  ')).toBe('Anjali');
-    expect(publicDisplayName('')).toBe('');
   });
 });
 

@@ -241,18 +241,25 @@ Further reading:
 
 ---
 
-## The four rules this codebase does not bend
+## The rules this codebase does not bend
 
-1. **A child's photograph does not reach the open web without a recorded
-   guardian consent** that is still in force at the moment of publication, and
-   without a district-level officer approving it. Withdrawing consent pulls
-   published work back in the same database transaction.
-2. **Nothing is published by the person who wrote it.** Moderation is always by
+1. **No personal data about any child, at all.** Not a name, not a photograph
+   tied to one, not a guardian's number, not a roll number — and not with
+   consent either. This replaced an earlier consent-ledger design outright:
+   the reasoning, and the destructive migration that proved it, are in
+   [`docs/data-protection.md`](docs/data-protection.md).
+2. **This platform measures systems, never people.** It can surface the school
+   with no water and the block where grants stall. It cannot produce a list of
+   teachers ranked by anything, and no report above the school carries a
+   per-teacher number. The full set of promises, the tests that enforce them
+   and the screen that shows them to a teacher are in
+   [`docs/promises.md`](docs/promises.md).
+3. **Nothing is published by the person who wrote it.** Moderation is always by
    a second person, and every decision is attributed and audited.
-3. **Reports count only moderated work**, measured against every school on the
+4. **Reports count only moderated work**, measured against every school on the
    register — not only the ones that signed up. A dashboard that flatters the
    department is worse than no dashboard.
-4. **The public showcase builds its own narrow response type.** It never filters
+5. **The public showcase builds its own narrow response type.** It never filters
    an internal record down, so a field added to the model in six months cannot
    quietly appear on the open web.
 
