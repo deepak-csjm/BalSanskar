@@ -172,6 +172,14 @@ async function seedDemoData(): Promise<void> {
 
   const officers = [
     {
+      phone: '+919999900012',
+      fullName: 'राज्य समन्वयक (डेमो)',
+      role: 'STATE_ADMIN' as const,
+      designation: 'महानिदेशक कार्यालय',
+      districtId: null as string | null,
+      blockId: null as string | null,
+    },
+    {
       phone: '+919999900010',
       fullName: 'जनपद समन्वयक (डेमो)',
       role: 'DISTRICT_ADMIN' as const,
@@ -207,9 +215,87 @@ async function seedDemoData(): Promise<void> {
   }
 
   console.log(
-    `Demo data: a district officer (9999900010) and a block officer for ` +
-      `${gilaula.nameEn} (9999900011), both signing in by one-time code`,
+    `Demo data: a state officer (9999900012), a district officer (9999900010) and a ` +
+      `block officer for ${gilaula.nameEn} (9999900011), all signing in by one-time code`,
   );
+
+  await seedDemoDirectives(district.id, gilaula.id);
+}
+
+/**
+ * Two orders on the register, so the screen is not empty on a clean database.
+ *
+ * The letter numbers are deliberately prefixed DEMO and could not be mistaken
+ * for real ones. docs/evidence.md warns that publishing a misattributed order
+ * number would hand officials a reason to dismiss everything else on this
+ * platform, and a seed file is exactly where a plausible-looking fake would
+ * escape into a screenshot.
+ *
+ * One supersedes the other, because "which order governs me today" is the
+ * question the register exists to answer and a single row cannot demonstrate
+ * it.
+ */
+async function seedDemoDirectives(districtId: string, blockId: string): Promise<void> {
+  const publisher = await prisma.user.findUnique({ where: { phone: '+919999900012' } });
+  if (!publisher) return;
+  if ((await prisma.directive.count()) > 0) {
+    console.log('Demo data: orders already on the register, left untouched');
+    return;
+  }
+
+  const superseded = await prisma.directive.create({
+    data: {
+      source: 'STATE_ORDER',
+      status: 'ACTIVE',
+      letterNumber: 'DEMO/शै0कै0/2025-26/01',
+      letterNumberNormalised: 'demo-शै0कै0-2025-26-01',
+      issuedOn: new Date('2025-04-10T00:00:00.000Z'),
+      issuingOffice: 'महानिदेशक स्कूल शिक्षा (डेमो)',
+      title: 'शैक्षिक कैलेण्डर 2025-26 (डेमो)',
+      plainSummary:
+        'यह एक नमूना आदेश है, वास्तविक नहीं। विद्यालय अपने सूचना पट पर शैक्षिक कैलेण्डर लगाए।',
+      publishedById: publisher.id,
+      publishedByOffice: 'महानिदेशक स्कूल शिक्षा (डेमो)',
+    },
+  });
+
+  await prisma.directive.create({
+    data: {
+      source: 'STATE_ORDER',
+      letterNumber: 'DEMO/शै0कै0/2026-27/01',
+      letterNumberNormalised: 'demo-शै0कै0-2026-27-01',
+      issuedOn: new Date('2026-03-30T00:00:00.000Z'),
+      issuingOffice: 'महानिदेशक स्कूल शिक्षा (डेमो)',
+      title: 'शैक्षिक कैलेण्डर 2026-27 (डेमो)',
+      plainSummary:
+        'यह एक नमूना आदेश है, वास्तविक नहीं। नया शैक्षिक कैलेण्डर सूचना पट पर लगाइए और ' +
+        'अभिभावक बैठक की तिथियाँ उसी के अनुसार तय कीजिए। पिछले सत्र का आदेश अब प्रभावी नहीं है।',
+      supersedesId: superseded.id,
+      publishedById: publisher.id,
+      publishedByOffice: 'महानिदेशक स्कूल शिक्षा (डेमो)',
+    },
+  });
+  await prisma.directive.update({ where: { id: superseded.id }, data: { status: 'SUPERSEDED' } });
+
+  await prisma.directive.create({
+    data: {
+      source: 'BLOCK_INSTRUCTION',
+      letterNumber: 'DEMO/खं0/2026/48',
+      letterNumberNormalised: 'demo-खं0-2026-48',
+      issuedOn: new Date('2026-08-12T00:00:00.000Z'),
+      issuingOffice: 'खंड शिक्षा अधिकारी (डेमो)',
+      title: 'मासिक शिक्षक संकुल बैठक (डेमो)',
+      plainSummary:
+        'यह एक नमूना निर्देश है। प्रत्येक माह के दूसरे मंगलवार को न्याय पंचायत स्तर पर शिक्षक ' +
+        'संकुल बैठक होगी। यह खंड स्तरीय निर्देश है, शासनादेश नहीं — मंच पर इसका स्तर स्पष्ट दिखता है।',
+      districtId,
+      blockId,
+      publishedById: publisher.id,
+      publishedByOffice: 'खंड शिक्षा अधिकारी (डेमो)',
+    },
+  });
+
+  console.log('Demo data: 3 orders on the register, one of them superseded (all marked DEMO)');
 }
 
 async function main(): Promise<void> {

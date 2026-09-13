@@ -76,20 +76,35 @@ rather than a pull request are in
 
 ## What is built
 
-| Area                                                                                                                                         | State                                                   |
-| -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| Domain contracts, RBAC and data-protection policy (`packages/shared`)                                                                        | Complete, 71 unit tests                                 |
-| Data model with database-level constraints (`apps/api/prisma`)                                                                               | Complete, 4 migrations                                  |
-| API: auth, schools, people, students, consent, activities, moderation, achievements, reporting, public showcase, uploads, audit (`apps/api`) | Complete, 109 integration tests against real PostgreSQL |
-| School onboarding at scale: claim a UDISE code, block office confirms it                                                                     | Complete — see [`docs/integrity.md`](docs/integrity.md) |
-| The gate out of the school: head teacher attests, block office clears, risk-ranked queue                                                     | Complete — see [`docs/integrity.md`](docs/integrity.md) |
-| Web PWA: Hindi-first, offline capture, moderation console, dashboards, showcase (`apps/web`)                                                 | Complete, 22 tests, 88.6 KB gzipped first load          |
-| Containers, compose stack, CI, seed data for all 75 districts                                                                                | Complete                                                |
-| End-to-end scripts for both journeys, run against a live server                                                                              | Complete, passing                                       |
+| Area                                                                                                                                                  | State                                                   |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Domain contracts, RBAC, publish policy, promises (`packages/shared`)                                                                                  | Complete, 86 unit tests                                 |
+| Data model with database-level constraints (`apps/api/prisma`)                                                                                        | Complete, 11 migrations                                 |
+| API: auth, schools, people, enrolment counts, activities, moderation, achievements, reporting, public showcase, uploads, audit                        | Complete, 187 integration tests against real PostgreSQL |
+| School onboarding at scale: claim a UDISE code, block office confirms it                                                                              | Complete — [`docs/integrity.md`](docs/integrity.md)     |
+| The gate out of the school: head teacher attests, block office clears, risk-ranked queue, duplicate-photograph detection                              | Complete — [`docs/integrity.md`](docs/integrity.md)     |
+| **The promises**: eleven guarantees, enforced by tests, shown to a teacher at `/vachan`                                                               | Complete — [`docs/promises.md`](docs/promises.md)       |
+| **The clock on the offices**: who is holding a school's work and for how long, an officer's own backlog first, turnaround by office                   | Complete                                                |
+| **The duty ledger**: teaching days consumed by census, election, survey and portal work, classified against RTE s.27, doubling as an honorarium claim | Complete                                                |
+| **The order register**: is this letter real, what applies to this school, and a school's answer including "we could not, and here is what is missing" | Complete                                                |
+| The village's side: needs board, SMC minutes and answers, habitation surveys, public page at `/vidyalaya/:udiseCode`                                  | Complete                                                |
+| Web PWA: Hindi-first, offline capture, one locale downloaded not two (`apps/web`)                                                                     | Complete, 31 tests, 92.8 KB gzipped first load          |
+| Containers, compose stack, hourly maintenance sidecar, CI, seed for all 75 districts                                                                  | Complete                                                |
+| End-to-end scripts for both journeys, and 28 committed screenshots                                                                                    | Complete, passing                                       |
 
-Deliberately **not** built yet, and why — see [`docs/roadmap.md`](docs/roadmap.md):
-attendance, notifications, a native app, offline media capture beyond the
-outbox, and bulk UDISE import.
+**304 tests, all against real PostgreSQL rather than mocks.**
+
+What the design rests on, what is sourced and what is not yet verified:
+[`docs/evidence.md`](docs/evidence.md). It matters — six claims in there must
+not be repeated as fact until somebody checks them, and one of them would
+undercut the village page's whole theory of change if it holds.
+
+Deliberately **not** built, and why — see [`docs/roadmap.md`](docs/roadmap.md)
+and [`docs/launch-readiness.md`](docs/launch-readiness.md). The short list:
+teacher attendance in any form (never), a privacy notice and the
+access/correct/erase flows (legally blocking, designed, not built), CERT-In and
+STQC certification (external, long lead time), and a single-district pilot
+under a written agreement (nobody has spoken to a teacher yet).
 
 ---
 
@@ -138,10 +153,13 @@ returns it in the response, so no gateway is needed to sign in.
 | Sign in as                  | Number       | How                              |
 | --------------------------- | ------------ | -------------------------------- |
 | Platform administrator      | `9999900001` | password, whatever you set above |
+| State officer               | `9999900012` | one-time code                    |
 | District officer, Shravasti | `9999900010` | one-time code                    |
 | Block officer, Gilaula      | `9999900011` | one-time code                    |
 
-Those three, and deliberately nobody else. An officer cannot arrive through any
+Those four, and deliberately nobody else. The state officer exists because only
+that level may put a state order on the register, so without one the order
+screens have nothing on them and cannot be evaluated at all. An officer cannot arrive through any
 journey in the product — somebody with more authority has to appoint them — so
 without them the claim queue and the clearance queue are unreachable. Everyone
 below that level is left out on purpose: a head teacher arrives by claiming a
